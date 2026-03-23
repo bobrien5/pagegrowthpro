@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageGrowthPro — Setup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/meta-login.js"></script>
+  <script src="js/apify-scheduler.js"></script>
+</head>
+<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl">
+    <!-- Logo -->
+    <div class="text-center mb-6">
+      <h1 class="text-2xl font-extrabold text-white tracking-tight">
+        <span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span>
+      </h1>
+      <p class="text-sm text-gray-400 mt-1">Let's set up your competitive intelligence</p>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="flex items-center justify-center gap-2 mb-8">
+      <div id="step1dot" class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold">1</div>
+      <div class="w-12 h-0.5 bg-white/10" id="line12"></div>
+      <div id="step2dot" class="w-8 h-8 rounded-full bg-white/10 text-gray-500 flex items-center justify-center text-xs font-bold">2</div>
+      <div class="w-12 h-0.5 bg-white/10" id="line23"></div>
+      <div id="step3dot" class="w-8 h-8 rounded-full bg-white/10 text-gray-500 flex items-center justify-center text-xs font-bold">3</div>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 p-8 shadow-2xl">
+
+      <!-- STEP 1: Competitor URLs -->
+      <div id="step1" class="">
+        <h2 class="text-xl font-bold text-white mb-1">Add Competitor Facebook Pages</h2>
+        <p class="text-sm text-gray-400 mb-4">Paste the URLs of Facebook pages you want to track. We'll analyze their top-performing content to help you grow yours.</p>
+
+        <div class="space-y-3">
+          <div class="flex gap-2">
+            <input id="competitorInput" type="url" placeholder="https://www.facebook.com/pagename" class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" onkeydown="if(event.key==='Enter'){event.preventDefault();addCompetitor();}">
+            <button onclick="addCompetitor()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-3 rounded-xl transition">Add</button>
+          </div>
+          <div id="competitorError" class="hidden text-xs text-red-400"></div>
+
+          <!-- Counter -->
+          <div class="flex items-center justify-between">
+            <span id="competitorCount" class="text-xs text-gray-400">0 / 25 competitors added</span>
+            <span class="text-xs text-gray-500">Min 5 required</span>
+          </div>
+
+          <!-- List -->
+          <div id="competitorList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+
+          <!-- Bulk paste -->
+          <details class="text-xs text-gray-500">
+            <summary class="cursor-pointer hover:text-gray-300 transition">Paste multiple URLs at once</summary>
+            <textarea id="bulkUrls" rows="4" placeholder="One URL per line..." class="mt-2 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none font-mono"></textarea>
+            <button onclick="addBulkCompetitors()" class="mt-1 bg-purple-600/50 hover:bg-purple-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">Add All</button>
+          </details>
+        </div>
+
+        <button id="step1Next" onclick="goToStep(2)" disabled class="mt-6 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white font-semibold py-3 rounded-xl transition">
+          Next — Connect Your Page
+        </button>
+      </div>
+
+      <!-- STEP 2: Connect Facebook Page -->
+      <div id="step2" class="hidden">
+        <h2 class="text-xl font-bold text-white mb-1">Connect Your Facebook Page</h2>
+        <p class="text-sm text-gray-400 mb-6">Connect your page to schedule posts and see your analytics. You can skip this and set it up later.</p>
+
+        <div id="fbNotConnected" class="text-center py-8">
+          <svg class="w-16 h-16 mx-auto text-blue-400 mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+          <button onclick="handleConnectFacebook()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition text-sm">
+            Connect with Facebook
+          </button>
+          <p class="text-xs text-gray-500 mt-3">We'll request permission to post to your page and read analytics.</p>
+        </div>
+
+        <div id="fbConnected" class="hidden text-center py-8">
+          <div class="w-16 h-16 mx-auto bg-emerald-500/20 rounded-full flex items-center justify-center mb-4">
+            <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <p class="text-white font-semibold text-lg" id="fbPageNameDisplay">Page Connected!</p>
+          <p class="text-xs text-gray-400 mt-1">You can manage this in Settings later.</p>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button onclick="goToStep(1)" class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-medium py-3 rounded-xl transition text-sm">Back</button>
+          <button onclick="goToStep(3)" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition">
+            <span id="step2BtnText">Skip for Now</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Brand Basics -->
+      <div id="step3" class="hidden">
+        <h2 class="text-xl font-bold text-white mb-1">Brand Basics</h2>
+        <p class="text-sm text-gray-400 mb-6">Tell us about your brand so we can personalize your content.</p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Brand / Page Name</label>
+            <input id="onboardBrandName" type="text" placeholder="Your Brand" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Watermark Text (shown on generated images)</label>
+            <input id="onboardWatermark" type="text" placeholder="@yourbrand" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Default Hashtags</label>
+            <input id="onboardHashtags" type="text" placeholder="#YourBrand #Travel #BeachLife" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+          </div>
+        </div>
+
+        <div id="onboardError" class="hidden mt-4 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-2"></div>
+
+        <div class="flex gap-3 mt-6">
+          <button onclick="goToStep(2)" class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-medium py-3 rounded-xl transition text-sm">Back</button>
+          <button id="finishBtn" onclick="finishOnboarding()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
+            <span id="finishBtnText">Launch Dashboard</span>
+            <svg id="finishSpinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    let competitorUrls = [];
+
+    // --- Step Navigation ---
+    function goToStep(step) {
+      currentStep = step;
+      [1, 2, 3].forEach(s => {
+        document.getElementById(`step${s}`).classList.toggle('hidden', s !== step);
+        const dot = document.getElementById(`step${s}dot`);
+        if (s < step) { dot.className = 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold'; }
+        else if (s === step) { dot.className = 'w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold'; }
+        else { dot.className = 'w-8 h-8 rounded-full bg-white/10 text-gray-500 flex items-center justify-center text-xs font-bold'; }
+      });
+      if (step > 1) document.getElementById('line12').className = 'w-12 h-0.5 bg-emerald-500';
+      if (step > 2) document.getElementById('line23').className = 'w-12 h-0.5 bg-emerald-500';
+    }
+
+    // --- Competitor Management ---
+    function isValidFbUrl(url) {
+      try {
+        const u = new URL(url);
+        return u.hostname.includes('facebook.com') || u.hostname.includes('fb.com');
+      } catch { return false; }
+    }
+
+    function addCompetitor() {
+      const input = document.getElementById('competitorInput');
+      const url = input.value.trim();
+      const errorEl = document.getElementById('competitorError');
+      errorEl.classList.add('hidden');
+
+      if (!url) return;
+      if (!isValidFbUrl(url)) {
+        errorEl.textContent = 'Please enter a valid Facebook page URL';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      if (competitorUrls.includes(url)) {
+        errorEl.textContent = 'This URL is already added';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      if (competitorUrls.length >= MAX_COMPETITORS) {
+        errorEl.textContent = `Maximum ${MAX_COMPETITORS} competitors allowed`;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      competitorUrls.push(url);
+      input.value = '';
+      renderCompetitorList();
+    }
+
+    function addBulkCompetitors() {
+      const textarea = document.getElementById('bulkUrls');
+      const urls = textarea.value.trim().split('\n').map(u => u.trim()).filter(u => u);
+      const errorEl = document.getElementById('competitorError');
+      errorEl.classList.add('hidden');
+
+      let added = 0;
+      for (const url of urls) {
+        if (competitorUrls.length >= MAX_COMPETITORS) break;
+        if (isValidFbUrl(url) && !competitorUrls.includes(url)) {
+          competitorUrls.push(url);
+          added++;
+        }
+      }
+      textarea.value = '';
+      if (added > 0) renderCompetitorList();
+      else {
+        errorEl.textContent = 'No valid new Facebook URLs found';
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function removeCompetitorLocal(index) {
+      competitorUrls.splice(index, 1);
+      renderCompetitorList();
+    }
+
+    function renderCompetitorList() {
+      const list = document.getElementById('competitorList');
+      const countEl = document.getElementById('competitorCount');
+      const nextBtn = document.getElementById('step1Next');
+
+      countEl.textContent = `${competitorUrls.length} / ${MAX_COMPETITORS} competitors added`;
+      nextBtn.disabled = competitorUrls.length < 5;
+
+      list.innerHTML = competitorUrls.map((url, i) => `
+        <div class="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
+          <span class="text-xs text-emerald-400 font-mono">${i + 1}</span>
+          <span class="flex-1 text-sm text-white truncate">${extractPageName(url)}</span>
+          <span class="text-xs text-gray-500 truncate max-w-[180px]">${url}</span>
+          <button onclick="removeCompetitorLocal(${i})" class="text-red-400 hover:text-red-300 text-xs ml-1">&times;</button>
+        </div>
+      `).join('');
+    }
+
+    // --- Facebook Connect ---
+    async function handleConnectFacebook() {
+      try {
+        if (typeof connectFacebookPage === 'function') {
+          const result = await connectFacebookPage();
+          if (result && result.pageName) {
+            document.getElementById('fbNotConnected').classList.add('hidden');
+            document.getElementById('fbConnected').classList.remove('hidden');
+            document.getElementById('fbPageNameDisplay').textContent = result.pageName + ' Connected!';
+            document.getElementById('step2BtnText').textContent = 'Next — Brand Setup';
+          }
+        } else {
+          alert('Facebook Login not configured yet. You can set this up later in Settings.');
+        }
+      } catch (err) {
+        alert('Facebook connection failed: ' + err.message);
+      }
+    }
+
+    // --- Finish Onboarding ---
+    async function finishOnboarding() {
+      const btn = document.getElementById('finishBtn');
+      const spinner = document.getElementById('finishSpinner');
+      const btnText = document.getElementById('finishBtnText');
+      const errorEl = document.getElementById('onboardError');
+
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnText.textContent = 'Setting up...';
+      errorEl.classList.add('hidden');
+
+      try {
+        const user = await getUser();
+        if (!user) throw new Error('Not logged in');
+
+        // 1. Save competitors to Supabase
+        await saveCompetitors(user.id, competitorUrls);
+
+        // 2. Save brand settings
+        const brandSettings = {
+          brandName: document.getElementById('onboardBrandName').value.trim() || '',
+          watermark: document.getElementById('onboardWatermark').value.trim() || '',
+          hashtags: document.getElementById('onboardHashtags').value.trim() || '',
+        };
+        await saveUserSettings(user.id, { brand_settings: brandSettings });
+
+        // 3. Trigger first Apify scrape (async, don't wait)
+        btnText.textContent = 'Scraping competitors...';
+        try {
+          if (typeof triggerScrapeNow === 'function') {
+            await triggerScrapeNow(user.id, competitorUrls);
+          }
+        } catch (scrapeErr) {
+          console.warn('First scrape failed (can retry later):', scrapeErr);
+        }
+
+        // 4. Redirect to dashboard
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        errorEl.textContent = err.message || 'Something went wrong';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Launch Dashboard';
+      }
+    }
+
+    // --- Auth gate ---
+    (async () => {
+      const user = await requireAuth();
+      if (!user) return; // redirected to login
+      // If already onboarded, redirect to dashboard
+      const competitors = await getCompetitors(user.id);
+      if (competitors.length > 0) {
+        window.location.href = 'index.html';
+      }
+    })();
+  </script>
+</body>
+</html>

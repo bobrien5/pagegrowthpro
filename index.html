@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageGrowthPro — Key Insights</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/meta-login.js"></script>
+  <script src="js/apify-scheduler.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .card-light { background: #ffffff; border: 1px solid #e2e8f0; }
+    .accent-gradient { background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-card:hover { transform: translateY(-2px); transition: all 0.2s; }
+    canvas { max-height: 300px; }
+  </style>
+  <script>tailwind.config = { theme: { extend: { colors: { dark: { 800: '#1e293b', 900: '#0f172a' } } } } }</script>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-bg text-white py-6 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-6">
+          <div>
+            <h1 class="text-2xl font-extrabold tracking-tight"><span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span></h1>
+            <p class="text-gray-400 text-xs mt-0.5">Facebook Content Intelligence</p>
+          </div>
+          <nav class="hidden md:flex items-center gap-1" id="navBar"></nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="postCount" class="text-sm text-gray-400"></span>
+          <label class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg cursor-pointer transition">
+            Load Data
+            <input type="file" id="fileInput" accept=".json" class="hidden">
+          </label>
+          <button onclick="toggleSettings()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition" title="Settings">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </button>
+          <button onclick="handleSignOut()" class="text-xs text-gray-400 hover:text-white transition px-2 py-1.5 rounded-lg hover:bg-white/10">Sign Out</button>
+        </div>
+      </div>
+      <!-- Settings Panel -->
+      <div id="settingsPanel" class="hidden mt-6 bg-white/10 rounded-xl p-5 backdrop-blur-sm">
+        <h3 class="font-semibold text-white mb-4">API Settings</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Google Gemini API Key</label>
+            <input id="settingGeminiKey" type="password" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <p class="text-xs text-gray-400 mt-1">Free at <a href="https://aistudio.google.com/apikey" target="_blank" class="text-blue-400 underline">aistudio.google.com</a></p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token</label>
+            <input id="settingFbToken" type="password" placeholder="EAAx..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page ID</label>
+            <input id="settingFbPageId" type="text" placeholder="123456789..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div class="flex items-center gap-4 mt-4">
+          <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save Settings</button>
+          <span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span>
+        </div>
+        <details class="mt-4">
+          <summary class="cursor-pointer text-sm font-medium text-blue-400 hover:text-blue-300">How to get a Facebook Page Access Token</summary>
+          <ol class="mt-2 space-y-1 text-xs text-gray-300 list-decimal list-inside">
+            <li>Go to <a href="https://developers.facebook.com" target="_blank" class="text-blue-400 underline">developers.facebook.com</a> and create an App (type: Business)</li>
+            <li>Open <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-400 underline">Graph API Explorer</a>, select your App</li>
+            <li>Click "Generate Access Token", grant <code class="bg-white/10 px-1 rounded">pages_manage_posts</code> and <code class="bg-white/10 px-1 rounded">pages_read_engagement</code></li>
+            <li>Select your Page from the "User or Page" dropdown, copy the token</li>
+            <li>Exchange for long-lived token: <code class="bg-white/10 px-1 rounded text-xs">GET /oauth/access_token?grant_type=fb_exchange_token&client_id=APP_ID&client_secret=APP_SECRET&fb_exchange_token=TOKEN</code></li>
+            <li>Get permanent Page token: <code class="bg-white/10 px-1 rounded text-xs">GET /me/accounts?access_token=LONG_LIVED_TOKEN</code></li>
+            <li>The Page token from step 6 never expires. Paste it above.</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="max-w-7xl mx-auto px-6 py-20 text-center">
+    <div class="text-6xl mb-4">📊</div>
+    <h2 class="text-2xl font-bold text-gray-700">Load your scraped data</h2>
+    <p class="text-gray-500 mt-2">Click "Load Data" and select <code class="bg-gray-200 px-2 py-1 rounded text-sm">fb-posts-analyzed.json</code></p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- Playbook Banner -->
+    <section class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
+      <h2 class="text-xl font-bold mb-4">Competitor Playbook — What's Working for Others</h2>
+      <div id="playbookGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    </section>
+
+    <!-- Stat Cards -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="stat-card card-light rounded-xl p-5 text-center shadow-sm">
+        <p class="text-3xl font-extrabold text-blue-600" id="statTotalPosts">—</p>
+        <p class="text-sm text-gray-500 mt-1">Competitor Posts</p>
+      </div>
+      <div class="stat-card card-light rounded-xl p-5 text-center shadow-sm">
+        <p class="text-3xl font-extrabold text-green-600" id="statAvgEng">—</p>
+        <p class="text-sm text-gray-500 mt-1">Avg Engagement</p>
+      </div>
+      <div class="stat-card card-light rounded-xl p-5 text-center shadow-sm">
+        <p class="text-3xl font-extrabold text-purple-600" id="statTopType">—</p>
+        <p class="text-sm text-gray-500 mt-1">Best Content Type</p>
+      </div>
+      <div class="stat-card card-light rounded-xl p-5 text-center shadow-sm">
+        <p class="text-3xl font-extrabold text-orange-600" id="statBestDay">—</p>
+        <p class="text-sm text-gray-500 mt-1">Best Day to Post</p>
+      </div>
+    </section>
+
+    <!-- Top Posts Table -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-4">Top 20 Competitor Posts by Engagement</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 text-left text-gray-500">
+              <th class="pb-3 pr-4">#</th>
+              <th class="pb-3 pr-4">Page</th>
+              <th class="pb-3 pr-4">Format</th>
+              <th class="pb-3 pr-4">Post Preview</th>
+              <th class="pb-3 pr-4 text-right">Likes</th>
+              <th class="pb-3 pr-4 text-right">Comments</th>
+              <th class="pb-3 pr-4 text-right">Shares</th>
+              <th class="pb-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="topPostsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Winning Themes -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-4">Winning Themes from Competitors</h3>
+      <div id="themesCloud" class="flex flex-wrap gap-2"></div>
+    </section>
+
+    <!-- AI Post Generator -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h3 class="font-bold text-lg">AI Post Generator</h3>
+          <p class="text-sm text-gray-500 mt-1">Create ready-to-post content inspired by top competitor posts</p>
+        </div>
+        <button id="generateBtn" onclick="generateAllPosts()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Generate All Posts
+        </button>
+      </div>
+
+      <!-- Brand Voice Settings -->
+      <details id="brandSettings" class="mb-4 border border-purple-200 rounded-xl">
+        <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-purple-700 hover:bg-purple-50 rounded-xl transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+          Brand Voice & Customization
+        </summary>
+        <div class="px-4 pb-4 pt-2 space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Brand Name</label>
+              <input id="brandName" type="text" value="VacationPro" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Default Hashtags</label>
+              <input id="brandHashtags" type="text" value="#VacationPro #AllInclusive #BeachLife" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Brand Voice / Tone</label>
+            <textarea id="brandVoice" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g. Fun, casual, aspirational. We're the friend who always knows the best beach spots."></textarea>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Caption Style</label>
+              <select id="brandCtaStyle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="question">Question (Agree or disagree?)</option>
+                <option value="tag">Tag a Friend</option>
+                <option value="mood">Mood / Vibe</option>
+                <option value="mixed">Mix it up (random)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Watermark Text</label>
+              <input id="brandWatermark" type="text" value="@allinclusivehq" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Brand Guide</label>
+              <div class="flex items-center gap-2">
+                <label class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400 cursor-pointer hover:bg-gray-50 transition truncate">
+                  <span id="brandGuideLabel">Upload .txt or .md</span>
+                  <input type="file" id="brandGuideFile" accept=".txt,.md" class="hidden" onchange="uploadBrandGuide(this)">
+                </label>
+                <button onclick="removeBrandGuide()" id="brandGuideRemoveBtn" class="hidden text-xs text-red-500 hover:text-red-700">Remove</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Custom Image Instructions</label>
+            <textarea id="brandCustomInstructions" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g. Always show luxury resorts, bright tropical colors, no people close-up"></textarea>
+          </div>
+          <!-- Canvas Overlay Controls -->
+          <div class="border-t border-purple-100 pt-3 mt-3">
+            <p class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">Text Overlay Style</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Font Size</label>
+                <select id="overlayFontSize" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="40">Small (40px)</option>
+                  <option value="52" selected>Medium (52px)</option>
+                  <option value="64">Large (64px)</option>
+                  <option value="76">XL (76px)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Text Position</label>
+                <select id="overlayPosition" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="center" selected>Center</option>
+                  <option value="upper">Upper Third</option>
+                  <option value="lower">Lower Third</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Overlay Darkness</label>
+                <select id="overlayDarkness" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="0.15">Light</option>
+                  <option value="0.35">Medium</option>
+                  <option value="0.5" selected>Standard</option>
+                  <option value="0.65">Heavy</option>
+                  <option value="0">None</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Text Color</label>
+                <select id="overlayTextColor" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="#ffffff" selected>White</option>
+                  <option value="#FFD700">Gold</option>
+                  <option value="#00E5FF">Cyan</option>
+                  <option value="#FF6B6B">Coral</option>
+                  <option value="#000000">Black</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Font Weight</label>
+                <select id="overlayFontWeight" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="400">Normal</option>
+                  <option value="600">Semi-Bold</option>
+                  <option value="700" selected>Bold</option>
+                  <option value="900">Black</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Shadow Strength</label>
+                <select id="overlayShadow" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="0">None</option>
+                  <option value="8">Light</option>
+                  <option value="12" selected>Standard</option>
+                  <option value="20">Heavy</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Watermark Size</label>
+                <select id="overlayWatermarkSize" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="14">Small</option>
+                  <option value="18" selected>Medium</option>
+                  <option value="24">Large</option>
+                  <option value="0">Hidden</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Letter Spacing</label>
+                <select id="overlayLetterSpacing" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <option value="0" selected>Normal</option>
+                  <option value="1">Slight</option>
+                  <option value="2">Wide</option>
+                  <option value="4">Extra Wide</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button onclick="saveBrandSettings()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition mt-2">Save Brand Settings</button>
+          <span id="brandSaved" class="text-xs text-green-600 hidden ml-2">Saved!</span>
+        </div>
+      </details>
+
+      <!-- Post Count Controls + Tabs -->
+      <div class="flex flex-wrap items-center gap-3 mb-3 px-1">
+        <label class="flex items-center gap-1.5 text-xs text-gray-600">
+          <span class="bg-purple-100 text-purple-700 font-medium px-1.5 py-0.5 rounded">Static</span>
+          <input id="countStatic" type="number" min="1" max="20" value="6" class="w-14 border border-gray-300 rounded px-2 py-1 text-xs text-center focus:ring-1 focus:ring-purple-400 focus:outline-none">
+        </label>
+        <label class="flex items-center gap-1.5 text-xs text-gray-600">
+          <span class="bg-pink-100 text-pink-700 font-medium px-1.5 py-0.5 rounded">Reels</span>
+          <input id="countReels" type="number" min="1" max="20" value="4" class="w-14 border border-gray-300 rounded px-2 py-1 text-xs text-center focus:ring-1 focus:ring-pink-400 focus:outline-none">
+        </label>
+        <label class="flex items-center gap-1.5 text-xs text-gray-600">
+          <span class="bg-gray-200 text-gray-700 font-medium px-1.5 py-0.5 rounded">Text</span>
+          <input id="countText" type="number" min="1" max="20" value="6" class="w-14 border border-gray-300 rounded px-2 py-1 text-xs text-center focus:ring-1 focus:ring-gray-400 focus:outline-none">
+        </label>
+        <span class="text-xs text-gray-400 ml-1">posts each</span>
+      </div>
+      <div class="flex border-b border-gray-200 mb-4">
+        <button onclick="switchTab('static')" id="tabStatic" class="px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700 -mb-px">Static Posts</button>
+        <button onclick="switchTab('reels')" id="tabReels" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px">Reel Briefs</button>
+        <button onclick="switchTab('text')" id="tabText" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px">Text Posts</button>
+      </div>
+
+      <!-- Progress -->
+      <div id="imageProgress" class="hidden mb-4">
+        <div class="flex items-center gap-2 text-sm text-purple-600 font-medium">
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          <span id="imageProgressText">Generating...</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+          <div id="imageProgressBar" class="bg-purple-600 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div id="tabContentStatic" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="tabContentReels" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+      <div id="tabContentText" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+  </div>
+
+  <!-- Schedule Post Modal -->
+  <div id="scheduleModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg">Schedule Facebook Post</h3>
+        <button onclick="closeScheduleModal()" class="text-gray-400 hover:text-gray-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4" id="schedulePreview"></div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Caption</label>
+      <textarea id="scheduleCaption" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Write your post caption..."></textarea>
+      <label class="block text-sm font-medium text-gray-700 mt-3 mb-1">Schedule Date & Time</label>
+      <input type="datetime-local" id="scheduleDateTime" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <p class="text-xs text-gray-400 mt-1">Must be at least 10 minutes in the future. Max 75 days ahead.</p>
+      <div id="scheduleStatus" class="hidden mt-3 text-sm font-medium rounded-lg px-3 py-2"></div>
+      <div class="flex justify-end gap-3 mt-4">
+        <button onclick="closeScheduleModal()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+        <button onclick="schedulePost()" id="scheduleSubmitBtn" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Schedule Post
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/dashboard-shared.js"></script>
+  <script>
+    // --- Init ---
+    document.getElementById('navBar').innerHTML = renderNav('insights');
+    document.addEventListener('DOMContentLoaded', initSettings);
+
+    initDataLoading(function renderDashboard() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('postCount').textContent = `${posts.length} posts from ${new Set(posts.map(p => p.pageName)).size} pages`;
+      renderStats();
+      renderPlaybook();
+      renderTopPosts();
+      renderThemes();
+      initPostGenerator();
+    });
+
+    // --- Stats ---
+    function renderStats() {
+      document.getElementById('statTotalPosts').textContent = posts.length.toLocaleString();
+      document.getElementById('statAvgEng').textContent = avgEngagement(posts).toLocaleString();
+      const typeMap = groupBy(posts, 'contentType');
+      const typeAvg = Object.entries(typeMap).map(([type, arr]) => ({ type, avg: avgEngagement(arr) })).sort((a, b) => b.avg - a.avg);
+      document.getElementById('statTopType').textContent = capitalize(typeAvg[0]?.type || '—');
+      const dayMap = groupBy(posts.filter(p => p.dayOfWeek), 'dayOfWeek');
+      const dayAvg = Object.entries(dayMap).map(([day, arr]) => ({ day, avg: avgEngagement(arr) })).sort((a, b) => b.avg - a.avg);
+      document.getElementById('statBestDay').textContent = dayAvg[0]?.day || '—';
+    }
+
+    // --- Playbook ---
+    function renderPlaybook() {
+      const grid = document.getElementById('playbookGrid');
+      const hourMap = groupBy(posts.filter(p => p.hour !== null), 'hour');
+      const hourAvg = Object.entries(hourMap).map(([h, arr]) => ({ hour: +h, avg: avgEngagement(arr), count: arr.length })).filter(h => h.count >= 3).sort((a, b) => b.avg - a.avg);
+      const typeMap = groupBy(posts, 'contentType');
+      const typeAvg = Object.entries(typeMap).map(([type, arr]) => ({ type, avg: avgEngagement(arr) })).sort((a, b) => b.avg - a.avg);
+      const dayMap = groupBy(posts.filter(p => p.dayOfWeek), 'dayOfWeek');
+      const dayAvg = Object.entries(dayMap).map(([day, arr]) => ({ day, avg: avgEngagement(arr) })).sort((a, b) => b.avg - a.avg);
+      const lengthBuckets = [{ label: '< 50', min: 0, max: 50 },{ label: '50-150', min: 50, max: 150 },{ label: '150-300', min: 150, max: 300 },{ label: '300-500', min: 300, max: 500 },{ label: '500+', min: 500, max: 99999 }];
+      const lengthPerf = lengthBuckets.map(b => { const bucket = posts.filter(p => p.textLength >= b.min && p.textLength < b.max); return { ...b, avg: avgEngagement(bucket), count: bucket.length }; }).filter(b => b.count >= 3).sort((a, b) => b.avg - a.avg);
+
+      const cards = [
+        { icon: '🕐', title: 'Best Time', value: formatHour(hourAvg[0]?.hour ?? 9), sub: `${hourAvg[0]?.avg || 0} avg engagement` },
+        { icon: '📸', title: 'Best Format', value: capitalize(typeAvg[0]?.type || 'photo'), sub: `${typeAvg[0]?.avg || 0} avg engagement` },
+        { icon: '📅', title: 'Best Day', value: dayAvg[0]?.day || '—', sub: `${dayAvg[0]?.avg || 0} avg engagement` },
+        { icon: '📝', title: 'Ideal Length', value: lengthPerf[0]?.label || '—', sub: `${lengthPerf[0]?.avg || 0} avg engagement` },
+      ];
+      grid.innerHTML = cards.map(c => `
+        <div class="bg-white/10 backdrop-blur rounded-xl p-4">
+          <div class="text-2xl mb-1">${c.icon}</div>
+          <div class="font-bold text-lg">${c.value}</div>
+          <div class="text-xs text-blue-200">${c.title}</div>
+          <div class="text-xs text-blue-300 mt-1">${c.sub}</div>
+        </div>
+      `).join('');
+    }
+
+    // --- Top Posts ---
+    function renderTopPosts() {
+      const tbody = document.getElementById('topPostsBody');
+      tbody.innerHTML = posts.slice(0, 20).map((p, i) => {
+        const badge = getTypeBadge(p.contentType);
+        const preview = p.text ? p.text.slice(0, 80) + (p.text.length > 80 ? '...' : '') : '(no text)';
+        const link = p.postUrl ? `<a href="${p.postUrl}" target="_blank" class="hover:underline">${preview}</a>` : preview;
+        return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+          <td class="py-3 pr-4 font-bold text-gray-400">${i + 1}</td>
+          <td class="py-3 pr-4 font-medium text-sm">${p.pageName || 'Unknown'}</td>
+          <td class="py-3 pr-4"><span class="text-xs font-medium px-2 py-1 rounded-full ${badge}">${capitalize(p.contentType)}</span></td>
+          <td class="py-3 pr-4 text-gray-600 text-xs max-w-xs truncate">${link}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${p.likes.toLocaleString()}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${p.comments.toLocaleString()}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${p.shares.toLocaleString()}</td>
+          <td class="py-3 text-right font-bold tabular-nums text-blue-600">${p.totalEngagement.toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // --- Themes ---
+    function renderThemes() {
+      const stopWords = new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','to','of','in','for','on','with','at','by','from','as','into','through','during','before','after','above','below','between','out','off','over','under','again','further','then','once','here','there','when','where','why','how','all','each','every','both','few','more','most','other','some','such','no','nor','not','only','own','same','so','than','too','very','just','because','but','and','or','if','this','that','these','those','it','its','i','me','my','we','our','you','your','he','him','his','she','her','they','them','their','what','which','who','whom','up','about','get','got','like','one','also','new','know','see','go','come','make','take','want','look','use','find','give','tell','think','say','try','ask','need','feel','become','leave','put','mean','keep','let','begin','seem','help','show','hear','play','run','move','live','believe','bring','happen','write','provide','sit','stand','lose','pay','meet','include','continue','set','learn','change','lead','understand','watch','follow','stop','create','speak','read','allow','add','spend','grow','open','walk','win','teach','offer','remember','love','consider','appear','buy','wait','serve','die','send','expect','build','stay','fall','cut','reach','kill','remain']);
+      const wordCounts = {};
+      posts.forEach(p => {
+        (p.fullText || p.text || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).forEach(w => {
+          if (w.length > 3 && !stopWords.has(w)) wordCounts[w] = (wordCounts[w] || 0) + 1;
+        });
+      });
+      const wordEngagement = {};
+      posts.forEach(p => {
+        [...new Set((p.fullText || p.text || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/))].forEach(w => {
+          if (w.length > 3 && !stopWords.has(w) && wordCounts[w] >= 3) {
+            if (!wordEngagement[w]) wordEngagement[w] = { total: 0, count: 0 };
+            wordEngagement[w].total += p.totalEngagement;
+            wordEngagement[w].count++;
+          }
+        });
+      });
+      const themes = Object.entries(wordEngagement).map(([word, d]) => ({ word, avgEng: d.total / d.count, count: d.count })).sort((a, b) => b.avgEng - a.avgEng).slice(0, 40);
+      const maxAvg = themes[0]?.avgEng || 1;
+      document.getElementById('themesCloud').innerHTML = themes.map(t => {
+        const size = 0.75 + (t.avgEng / maxAvg) * 1.0;
+        const opacity = 0.5 + (t.avgEng / maxAvg) * 0.5;
+        return `<span class="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-medium cursor-default hover:bg-blue-200 transition" style="font-size:${size}rem; opacity:${opacity}" title="Avg engagement: ${Math.round(t.avgEng)} | Used ${t.count}x">${t.word}</span>`;
+      }).join('');
+    }
+
+    // --- Brand Settings ---
+    const BRAND_KEY = 'vpro_brand_settings';
+    function loadBrandSettings() { try { return JSON.parse(localStorage.getItem(BRAND_KEY)) || {}; } catch { return {}; } }
+    function saveBrandSettings() {
+      const bs = { brandName: document.getElementById('brandName').value.trim(), brandVoice: document.getElementById('brandVoice').value.trim(), hashtags: document.getElementById('brandHashtags').value.trim(), ctaStyle: document.getElementById('brandCtaStyle').value, watermark: document.getElementById('brandWatermark').value.trim(), customInstructions: document.getElementById('brandCustomInstructions').value.trim() };
+      // Preserve brand guide
+      const prev = loadBrandSettings();
+      if (prev.brandGuide) bs.brandGuide = prev.brandGuide;
+      if (prev.brandGuideFileName) bs.brandGuideFileName = prev.brandGuideFileName;
+      localStorage.setItem(BRAND_KEY, JSON.stringify(bs));
+      const el = document.getElementById('brandSaved'); el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 2000);
+    }
+    function initBrandSettings() {
+      const bs = loadBrandSettings();
+      if (bs.brandName) document.getElementById('brandName').value = bs.brandName;
+      if (bs.brandVoice) document.getElementById('brandVoice').value = bs.brandVoice;
+      if (bs.hashtags) document.getElementById('brandHashtags').value = bs.hashtags;
+      if (bs.ctaStyle) document.getElementById('brandCtaStyle').value = bs.ctaStyle;
+      if (bs.watermark) document.getElementById('brandWatermark').value = bs.watermark;
+      if (bs.customInstructions) document.getElementById('brandCustomInstructions').value = bs.customInstructions;
+      if (bs.brandGuideFileName) {
+        document.getElementById('brandGuideLabel').textContent = bs.brandGuideFileName;
+        document.getElementById('brandGuideRemoveBtn').classList.remove('hidden');
+      }
+    }
+    document.addEventListener('DOMContentLoaded', initBrandSettings);
+
+    function uploadBrandGuide(input) {
+      const file = input.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const bs = loadBrandSettings();
+        bs.brandGuide = e.target.result;
+        bs.brandGuideFileName = file.name;
+        localStorage.setItem(BRAND_KEY, JSON.stringify(bs));
+        document.getElementById('brandGuideLabel').textContent = file.name;
+        document.getElementById('brandGuideRemoveBtn').classList.remove('hidden');
+      };
+      reader.readAsText(file);
+    }
+    function removeBrandGuide() {
+      const bs = loadBrandSettings();
+      delete bs.brandGuide; delete bs.brandGuideFileName;
+      localStorage.setItem(BRAND_KEY, JSON.stringify(bs));
+      document.getElementById('brandGuideLabel').textContent = 'Upload .txt or .md';
+      document.getElementById('brandGuideRemoveBtn').classList.add('hidden');
+      document.getElementById('brandGuideFile').value = '';
+    }
+
+    // --- Tab Switching ---
+    function switchTab(tab) {
+      ['static', 'reels', 'text'].forEach(t => {
+        document.getElementById(`tabContent${capitalize(t)}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab${capitalize(t)}`);
+        btn.classList.toggle('border-purple-600', t === tab);
+        btn.classList.toggle('text-purple-700', t === tab);
+        btn.classList.toggle('border-transparent', t !== tab);
+        btn.classList.toggle('text-gray-500', t !== tab);
+      });
+    }
+
+    // =============================================================
+    // DATA-DRIVEN POST GENERATION — pulls from scraped top performers
+    // =============================================================
+
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+    function getCount(id) { return Math.max(1, Math.min(20, parseInt(document.getElementById(id)?.value) || 6)); }
+
+    // --- Extract insights from scraped data to drive generation ---
+    function getTopPerformers() {
+      if (!posts.length) return { statics: [], texts: [], all: [] };
+      const sorted = [...posts].sort((a, b) => b.totalEngagement - a.totalEngagement);
+      const statics = sorted.filter(p => p.contentType === 'photo' || p.contentType === 'image');
+      const texts = sorted.filter(p => p.contentType === 'text');
+      return { statics, texts, all: sorted };
+    }
+
+    // Pull real overlay lines from top static posts
+    function extractOverlayLines() {
+      const { statics, all } = getTopPerformers();
+      const source = statics.length >= 5 ? statics : all;
+      const lines = [];
+      source.slice(0, 40).forEach(p => {
+        const t = (p.fullText || p.text || '').trim();
+        // Good overlay = short, punchy, 5-80 chars, no links
+        if (t.length >= 5 && t.length <= 120 && !t.includes('http') && !t.includes('www.')) {
+          // Take first sentence/line
+          const first = t.split(/[\n.!?]/)[0].trim();
+          if (first.length >= 5 && first.length <= 100) lines.push(first);
+          else if (t.length <= 100) lines.push(t);
+        }
+      });
+      // Deduplicate and cap
+      return [...new Set(lines)].slice(0, 30);
+    }
+
+    // Pull real captions from top posts
+    function extractCaptionPool() {
+      const { all } = getTopPerformers();
+      const captions = { question: [], tag: [], mood: [] };
+      all.slice(0, 50).forEach(p => {
+        const t = (p.fullText || p.text || '').trim();
+        if (!t || t.length > 200 || t.includes('http')) return;
+        // Classify by content
+        if (/\?|agree|disagree|who else|name a|which|what|how|where|when/i.test(t)) captions.question.push(t);
+        else if (/tag|send this|share with/i.test(t)) captions.tag.push(t);
+        else captions.mood.push(t);
+      });
+      return captions;
+    }
+
+    // Pull text post ideas from top text-only posts
+    function extractTextPostPool() {
+      const { texts, all } = getTopPerformers();
+      const source = texts.length >= 3 ? texts : all;
+      return source.slice(0, 30)
+        .map(p => (p.fullText || p.text || '').trim())
+        .filter(t => t.length >= 10 && t.length <= 500 && !t.includes('http'));
+    }
+
+    // Build scenes from top static posts descriptions
+    function extractScenePool() {
+      const scenes = [
+        'beautiful beach at sunrise with gentle waves, golden light on the sand, calm peaceful morning',
+        'cup of coffee on a balcony table overlooking a tropical beach at sunrise, warm golden tones',
+        'bright sunny day at a tropical beach, turquoise water, white sand, palm trees, vibrant blue sky',
+        'stunning sunset through palm trees on a tropical beach, silhouettes, warm orange and pink sky',
+        'close up of feet in white sand at the beach, turquoise ocean in background, relaxed vacation day',
+        'stunning ocean view from a luxury resort balcony with infinity pool below, tropical paradise',
+        'aerial view of a turquoise lagoon with overwater bungalows, crystal clear water, dreamy paradise',
+        'two tropical cocktails on a wooden bar with ocean and palm trees in background, vacation vibes',
+        'couple walking hand in hand along a tropical beach at sunset, footprints in sand, romantic',
+        'hammock between two palm trees on white sand beach, first person view of turquoise ocean',
+        'woman on a pool float in a stunning infinity pool overlooking the ocean, summer vacation',
+        'tropical resort breakfast spread on an outdoor terrace with ocean view, fresh fruit, mimosas',
+        'crystal clear turquoise water lapping on a pristine white sand beach, no people, serene paradise',
+        'dramatic cliffside ocean view with crashing waves below, lush green cliffs, wild beauty',
+        'cozy beach cabana with white curtains blowing in the breeze, turquoise water in background',
+        'seashells scattered on wet sand at waters edge, soft morning light, peaceful beach detail',
+        'luxury yacht anchored in a turquoise bay surrounded by green mountains, paradise destination',
+        'palm tree lined path leading to a stunning hidden beach, dappled sunlight, tropical paradise',
+        'underwater shot of colorful coral reef and tropical fish, crystal clear water, magical ocean',
+        'bonfire on the beach at sunset with chairs around it, orange glow, evening beach party vibes',
+      ];
+      return scenes;
+    }
+
+    // Fallback lines if no data scraped yet
+    const FALLBACK_OVERLAY_LINES = [
+      'The only BS I need is "Beach" and "Sunshine"',
+      'My out-of-office reply is a palm tree emoji',
+      'I don\'t need therapy, I need a beach vacation',
+      'This is how every morning should start... Beach, sunrise, and coffee',
+      'My retirement plan is just a beach and a good book',
+      'You can\'t be stressed with your toes in the sand',
+      'Waking up is easier when you\'re surrounded by sand and sea',
+      'The beach is where my worries go to drown',
+      'I\'m not lazy, I\'m on beach mode',
+      'Correct me if I\'m wrong, but the beach fixes everything',
+      'My happy place has palm trees and no WiFi',
+      'This view. This feeling. This life.',
+      'Somewhere between the ocean and the sky, I found peace',
+      'Paradise isn\'t a place, it\'s a feeling',
+      'One minute you\'re young and busy... the next you just want a quiet day at the beach',
+    ];
+
+    const FALLBACK_CAPTIONS = {
+      question: ['Who else agrees?? 🌅🌴', 'Tell me I\'m not the only one 🤣☀️', 'Agree or disagree?? 🌊', 'Who needs this right now? 🏝️', 'Is this too much to ask for? 😍✈️', 'Anyone else feel this way?? 🌴'],
+      tag: ['Tag someone who needs to see this 🌅', 'Tag your travel partner 🍹☀️', 'Send this to someone who gets it 🤣🏖️', 'Tag a friend who needs a vacation ASAP ✈️'],
+      mood: ['Exactly how I want my mornings to look ☕️🌅', 'This is the only vibe I need 🌊☀️', 'Take me here immediately 🏝️', 'The dream right here 🌴✨', 'This is all I need in life 🤣🌅', 'Mood forever 🏖️💙'],
+    };
+
+    const FALLBACK_TEXT_POSTS = [
+      'When do you enjoy the beach most — morning or evening? ☀️🌅',
+      'If someone gave you a free plane ticket right now, where would you go? ✈️',
+      'Unpopular opinion: All-inclusive resorts are better than Airbnbs. Agree or disagree? 🤔',
+      'Name a destination that changed your life. GO 👇🌍',
+      'Beach or mountains? Comment your answer 🏖️⛰️',
+      'What\'s the one thing you ALWAYS pack for vacation? Drop it below 🧳',
+    ];
+
+    const REEL_HOOKS = [
+      { hook: 'Agree or disagree?', formats: ['Open with bold text overlay of a hot take', 'Show 3-4 clips of stunning destinations', 'End with "Comment below 👇"', 'Keep under 15 seconds'], music: 'Trending audio — upbeat/dramatic reveal' },
+      { hook: 'Tag who you\'re taking here 🏝️', formats: ['POV: You just booked the trip', 'Slow pan across resort/beach/pool', 'Text overlay: "Tag your +1"', 'End with destination reveal'], music: 'Chill/tropical beats or trending sound' },
+      { hook: 'Watch till the end 😍', formats: ['Start with everyday/office scene', 'Transition effect (snap/zoom/spin)', 'Cut to stunning beach or resort', 'Add "This could be you" text overlay'], music: 'Trending transition audio' },
+      { hook: 'Top 3 places you NEED to visit', formats: ['Countdown format: #3, #2, #1', 'Quick clips of each destination (2-3s each)', 'Text overlay with destination names', 'End: "Which one is your favorite? 👇"'], music: 'Energetic countdown/ranking audio' },
+      { hook: 'The beach hits different when...', formats: ['Start with relatable text overlay', 'Cut between 3-4 dreamy beach scenes', 'Slow zoom on the best shot', 'End with a call to action'], music: 'Lo-fi chill or trending ambient' },
+      { hook: 'POV: You just landed in paradise 🌴', formats: ['Airport/plane window opening shot', 'Quick montage: taxi, hotel lobby, room reveal', 'Big reveal: the beach/pool view', 'Text: "Was it worth it? 1000%"'], music: 'Build-up trending audio' },
+      { hook: 'Things I can\'t live without on vacation', formats: ['Quick cuts showing each item (3-5 items)', 'Text overlay labeling each one', 'Mix of funny + real items', 'End: "What am I missing? 👇"'], music: 'Upbeat/fun trending sound' },
+      { hook: 'If this doesn\'t make you want to travel...', formats: ['Stunning drone shot opening', 'Sequence of 4-5 jaw-dropping travel clips', 'Each clip 2-3 seconds max', 'No talking — let the visuals speak'], music: 'Cinematic/epic trending audio' },
+    ];
+
+    // === Unique generation with dedup tracking ===
+    let _usedOverlays = new Set();
+    let _usedCaptions = new Set();
+    let _usedScenes = new Set();
+    let _usedTexts = new Set();
+
+    function pickUnique(arr, usedSet) {
+      const available = arr.filter(x => !usedSet.has(x));
+      if (available.length === 0) { usedSet.clear(); return pickRandom(arr); }
+      const pick = pickRandom(available);
+      usedSet.add(pick);
+      return pick;
+    }
+
+    function generateCaption() {
+      const bs = loadBrandSettings();
+      const style = bs.ctaStyle || 'mixed';
+      const dataPool = extractCaptionPool();
+      // Merge data-driven + fallback
+      const merged = {
+        question: [...(dataPool.question || []), ...FALLBACK_CAPTIONS.question],
+        tag: [...(dataPool.tag || []), ...FALLBACK_CAPTIONS.tag],
+        mood: [...(dataPool.mood || []), ...FALLBACK_CAPTIONS.mood],
+      };
+      const pool = style === 'mixed'
+        ? [...merged.question, ...merged.tag, ...merged.mood]
+        : (merged[style] || merged.question);
+      let caption = pickUnique(pool, _usedCaptions);
+      // Trim to short FB caption style (max ~100 chars before hashtags)
+      if (caption.length > 120) caption = caption.slice(0, 100).replace(/\s+\S*$/, '') + '...';
+      if (bs.hashtags) caption += '\n\n' + bs.hashtags;
+      return caption;
+    }
+
+    // --- Gemini Image Prompt Builder ---
+    const generatedCaptions = [];
+    const overlayLines = [];
+
+    // --- Build a photo scene that MATCHES the overlay quote ---
+    function buildSceneFromQuote(quote) {
+      const q = quote.toLowerCase();
+      // Map quote keywords to matching photo scenes
+      const mappings = [
+        { keywords: ['retirement', 'book', 'read'], scene: 'person relaxing on a gorgeous tropical white sand beach reading a book in a beach chair, bright sunshine, turquoise ocean, peaceful retirement vibes' },
+        { keywords: ['coffee', 'morning', 'sunrise', 'wake'], scene: 'cup of coffee on a balcony railing overlooking a tropical beach at golden sunrise, warm morning light, palm trees, ocean view, cozy morning vibes' },
+        { keywords: ['bs', 'beach', 'sunshine', 'sunny'], scene: 'bright sunny day at a stunning tropical beach, turquoise water, white sand, palm trees swaying, vibrant blue sky, pure paradise' },
+        { keywords: ['therapy', 'need', 'vacation', 'getaway'], scene: 'stunning secluded tropical beach with crystal clear water, white sand, no crowds, peaceful escape from reality, hammock between palm trees' },
+        { keywords: ['out-of-office', 'office', 'work', 'email', 'palm tree emoji'], scene: 'laptop closed on a beach towel next to flip flops, turquoise ocean in background, vacation mode, out of office vibes' },
+        { keywords: ['toes', 'sand', 'feet', 'stress'], scene: 'close up of bare feet buried in warm white sand, turquoise ocean waves gently lapping nearby, total relaxation, beach therapy' },
+        { keywords: ['sunset', 'evening', 'golden', 'sky'], scene: 'breathtaking tropical sunset over the ocean, dramatic orange pink and purple sky, silhouette of palm trees, golden hour magic' },
+        { keywords: ['cocktail', 'drink', 'cheers', 'happy hour', 'margarita'], scene: 'two colorful tropical cocktails with fruit garnish on a beachside bar, turquoise ocean in background, vacation happy hour' },
+        { keywords: ['couple', 'together', 'love', 'romantic', 'hand'], scene: 'couple walking hand in hand along a tropical beach at sunset, footprints in sand, romantic golden light, love story' },
+        { keywords: ['hammock', 'lazy', 'relax', 'chill', 'nap', 'no plan'], scene: 'person relaxing in a hammock strung between palm trees on a white sand beach, turquoise ocean, zero stress, pure bliss' },
+        { keywords: ['pool', 'float', 'swim', 'infinity'], scene: 'stunning infinity pool overlooking the Caribbean ocean at golden hour, lounge chairs, tropical plants, luxury resort vibes' },
+        { keywords: ['bucket list', 'dream', 'paradise', 'heaven'], scene: 'jaw-dropping aerial view of a turquoise lagoon with overwater bungalows, crystal clear water, Maldives-style paradise' },
+        { keywords: ['happy place', 'wifi', 'disconnect', 'peace'], scene: 'hidden beach cove surrounded by lush tropical jungle, no people, crystal clear water, total disconnection from the world' },
+        { keywords: ['view', 'feeling', 'life', 'moment', 'this'], scene: 'stunning panoramic ocean view from a clifftop terrace, endless turquoise water meeting blue sky, breathtaking moment' },
+        { keywords: ['wave', 'ocean', 'sea', 'water', 'blue'], scene: 'massive crystal clear turquoise wave curling with sunlight shining through it, powerful ocean beauty, coastal paradise' },
+        { keywords: ['island', 'tropical', 'palm', 'caribbean'], scene: 'small tropical island with lush palm trees surrounded by crystal clear turquoise water, aerial view, private island paradise' },
+        { keywords: ['food', 'breakfast', 'eat', 'buffet', 'dining'], scene: 'gorgeous tropical resort breakfast spread on an outdoor terrace overlooking the ocean, fresh fruit, pastries, mimosas, luxury dining' },
+        { keywords: ['boat', 'yacht', 'sail', 'cruise'], scene: 'luxury yacht anchored in a crystal clear turquoise bay, surrounded by green islands, dream vacation on the water' },
+        { keywords: ['fire', 'bonfire', 'night', 'star', 'evening'], scene: 'cozy beach bonfire at sunset with chairs around it, orange glow, waves crashing nearby, perfect evening on the beach' },
+        { keywords: ['flight', 'plane', 'travel', 'airport', 'ticket'], scene: 'airplane wing view over a stunning turquoise ocean with small tropical islands below, window seat paradise, travel dreams' },
+      ];
+
+      // Find best matching scene
+      let bestMatch = null;
+      let bestScore = 0;
+      for (const m of mappings) {
+        const score = m.keywords.filter(kw => q.includes(kw)).length;
+        if (score > bestScore) { bestScore = score; bestMatch = m.scene; }
+      }
+
+      // Fallback: generic beautiful beach
+      if (!bestMatch) {
+        const fallbackScenes = [
+          'stunning tropical beach with turquoise water and white sand, palm trees, bright sunny day',
+          'beautiful ocean view at golden hour, waves gently crashing, warm peaceful light',
+          'crystal clear turquoise lagoon surrounded by lush tropical vegetation, serene paradise',
+          'aerial view of a stunning coastline with white sand and turquoise water, breathtaking',
+        ];
+        bestMatch = pickRandom(fallbackScenes);
+      }
+
+      return bestMatch;
+    }
+
+    function buildPhotoPrompt(scene) {
+      const bs = loadBrandSettings();
+      let prompt = `A stunning, high-quality photograph of ${scene}. `;
+      prompt += `Photorealistic, professional travel photography, vibrant natural colors, beautiful lighting. `;
+      prompt += `No text, no words, no letters, no watermarks, no logos anywhere in the image. Square 1:1 format.`;
+      if (bs.customInstructions) prompt += ` ${bs.customInstructions}`;
+      return prompt;
+    }
+
+    // --- Canvas Text Overlay (pixel-perfect, reads style from UI controls) ---
+    function getOverlaySettings() {
+      return {
+        fontSize: parseInt(document.getElementById('overlayFontSize')?.value) || 52,
+        position: document.getElementById('overlayPosition')?.value || 'center',
+        darkness: parseFloat(document.getElementById('overlayDarkness')?.value ?? 0.5),
+        textColor: document.getElementById('overlayTextColor')?.value || '#ffffff',
+        fontWeight: document.getElementById('overlayFontWeight')?.value || '700',
+        shadow: parseInt(document.getElementById('overlayShadow')?.value ?? 12),
+        watermarkSize: parseInt(document.getElementById('overlayWatermarkSize')?.value ?? 18),
+        letterSpacing: parseInt(document.getElementById('overlayLetterSpacing')?.value ?? 0),
+      };
+    }
+
+    function applyTextOverlay(imgDataUri, quote, watermark) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const S = 1024;
+          const canvas = document.createElement('canvas');
+          canvas.width = S; canvas.height = S;
+          const ctx = canvas.getContext('2d');
+          const os = getOverlaySettings();
+
+          // Draw photo
+          ctx.drawImage(img, 0, 0, S, S);
+
+          // --- Dark gradient overlay for text readability ---
+          if (os.darkness > 0) {
+            let gradTop, gradBot;
+            if (os.position === 'upper') { gradTop = 0; gradBot = S * 0.55; }
+            else if (os.position === 'lower') { gradTop = S * 0.45; gradBot = S; }
+            else { gradTop = S * 0.15; gradBot = S * 0.85; }
+
+            const grad = ctx.createLinearGradient(0, gradTop, 0, gradBot);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.2, `rgba(0,0,0,${os.darkness * 0.5})`);
+            grad.addColorStop(0.5, `rgba(0,0,0,${os.darkness})`);
+            grad.addColorStop(0.8, `rgba(0,0,0,${os.darkness * 0.5})`);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, gradTop, S, gradBot - gradTop);
+          }
+
+          // --- Quote text ---
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          let fontSize = os.fontSize;
+          const maxWidth = S * 0.82;
+          const fontStr = () => `${os.fontWeight} ${fontSize}px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
+          ctx.font = fontStr();
+
+          // Letter spacing via character-by-character drawing
+          const spacing = os.letterSpacing;
+
+          function wrapText(text, maxW) {
+            const words = text.split(' ');
+            const lines = [];
+            let current = '';
+            for (const word of words) {
+              const test = current ? current + ' ' + word : word;
+              const extraSpacing = test.length * spacing;
+              if ((ctx.measureText(test).width + extraSpacing) > maxW && current) {
+                lines.push(current);
+                current = word;
+              } else {
+                current = test;
+              }
+            }
+            if (current) lines.push(current);
+            return lines;
+          }
+
+          let lines = wrapText(quote, maxWidth);
+          while (lines.length > 5 && fontSize > 28) {
+            fontSize -= 4;
+            ctx.font = fontStr();
+            lines = wrapText(quote, maxWidth);
+          }
+
+          const lineHeight = fontSize * 1.3;
+          const totalHeight = lines.length * lineHeight;
+
+          // Position
+          let centerY;
+          if (os.position === 'upper') centerY = S * 0.28;
+          else if (os.position === 'lower') centerY = S * 0.72;
+          else centerY = S / 2;
+
+          const startY = centerY - (totalHeight / 2) + (lineHeight / 2);
+
+          // Text shadow
+          if (os.shadow > 0) {
+            ctx.shadowColor = 'rgba(0,0,0,0.7)';
+            ctx.shadowBlur = os.shadow;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = Math.max(2, os.shadow / 4);
+          }
+
+          // Draw each line
+          ctx.fillStyle = os.textColor;
+          ctx.font = fontStr();
+
+          if (spacing > 0) {
+            // Draw with letter spacing
+            lines.forEach((line, i) => {
+              const y = startY + i * lineHeight;
+              const chars = line.split('');
+              const totalW = ctx.measureText(line).width + (chars.length - 1) * spacing;
+              let x = (S / 2) - (totalW / 2);
+              chars.forEach(ch => {
+                ctx.fillText(ch, x + ctx.measureText(ch).width / 2, y);
+                x += ctx.measureText(ch).width + spacing;
+              });
+            });
+          } else {
+            lines.forEach((line, i) => {
+              ctx.fillText(line, S / 2, startY + i * lineHeight);
+            });
+          }
+
+          // Reset shadow
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+
+          // --- Watermark at bottom ---
+          if (watermark && os.watermarkSize > 0) {
+            ctx.font = `600 ${os.watermarkSize}px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
+            ctx.fillStyle = os.textColor === '#000000' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)';
+            ctx.fillText(watermark, S / 2, S - 28);
+          }
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.src = imgDataUri;
+      });
+    }
+
+    // --- Full pipeline: quote → matching scene → photo → canvas overlay ---
+    async function generateStaticImage(quote) {
+      const bs = loadBrandSettings();
+      const watermark = bs.watermark || '@allinclusivehq';
+      const scene = buildSceneFromQuote(quote);
+      const photoPrompt = buildPhotoPrompt(scene);
+      const photoDataUri = await generateImageWithGemini(photoPrompt);
+      const finalDataUri = await applyTextOverlay(photoDataUri, quote, watermark);
+      return finalDataUri;
+    }
+
+    async function generateImageWithGemini(prompt) {
+      const apiKey = getGeminiKey();
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: '1:1' } })
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `Gemini API error: ${res.status}`); }
+      const data = await res.json();
+      if (!data.predictions?.[0]?.bytesBase64Encoded) throw new Error('No image returned');
+      return 'data:image/png;base64,' + data.predictions[0].bytesBase64Encoded;
+    }
+
+    // === STATIC POSTS (data-driven) ===
+    function renderStaticCard(index, quote, caption, imgSrc) {
+      const loaded = !!imgSrc;
+      const safeTitle = `static-${index}`;
+      return `<div class="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white" id="imgCard${index}">
+        <div class="aspect-square bg-gray-100 flex items-center justify-center" id="imgContainer${index}">
+          ${loaded ? `<img src="${imgSrc}" class="w-full h-full object-cover" id="genImg${index}" crossorigin="anonymous">` : `<div class="text-center text-gray-400 p-6"><svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><p class="text-xs font-medium">"${quote}"</p><p class="text-xs mt-1 text-gray-300">Click Generate</p></div>`}
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between mb-1">
+            <h4 class="font-semibold text-sm">Static #${index + 1}</h4>
+            <div class="flex items-center gap-1">
+              <button onclick="downloadImage(${index}, '${safeTitle}')" class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium px-2 py-1 rounded-lg transition" id="dlBtn${index}" ${loaded ? '' : 'disabled'}>PNG</button>
+              <button onclick="openScheduleModal(${index}, 'static')" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium px-2 py-1 rounded-lg transition" id="schedBtn${index}" ${loaded ? '' : 'disabled'}>Schedule</button>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mb-1">On image: "<em>${quote}</em>"</p>
+          <p class="text-xs text-gray-400 mb-1">Facebook caption:</p>
+          <textarea id="caption${index}" rows="2" class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none">${caption}</textarea>
+        </div>
+      </div>`;
+    }
+
+    function renderStaticPlaceholders() {
+      const count = getCount('countStatic');
+      const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
+      _usedOverlays.clear(); _usedCaptions.clear(); _usedScenes.clear();
+      overlayLines.length = 0; generatedCaptions.length = 0;
+      for (let i = 0; i < count; i++) {
+        overlayLines[i] = pickUnique(overlayPool, _usedOverlays);
+        generatedCaptions[i] = generateCaption();
+      }
+      document.getElementById('tabContentStatic').innerHTML =
+        Array.from({ length: count }, (_, i) => renderStaticCard(i, overlayLines[i], generatedCaptions[i], null)).join('');
+    }
+
+    async function generateStaticPosts() {
+      const count = getCount('countStatic');
+      const progress = document.getElementById('imageProgress');
+      const progressText = document.getElementById('imageProgressText');
+      const progressBar = document.getElementById('imageProgressBar');
+
+      const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
+      _usedOverlays.clear(); _usedCaptions.clear();
+      overlayLines.length = 0; generatedCaptions.length = 0;
+
+      for (let i = 0; i < count; i++) {
+        overlayLines[i] = pickUnique(overlayPool, _usedOverlays);
+        generatedCaptions[i] = generateCaption();
+      }
+
+      document.getElementById('tabContentStatic').innerHTML =
+        Array.from({ length: count }, (_, i) => renderStaticCard(i, overlayLines[i], generatedCaptions[i], null)).join('');
+
+      progress.classList.remove('hidden');
+      let completed = 0;
+      for (let i = 0; i < count; i++) {
+        progressText.textContent = `Generating static ${i+1}/${count}: "${overlayLines[i].slice(0, 40)}..."`;
+        progressBar.style.width = `${(i / count) * 100}%`;
+        try {
+          // Quote drives the scene — photo matches the overlay text
+          const dataUri = await generateStaticImage(overlayLines[i]);
+          generatedImageData[i] = dataUri;
+          const c = document.getElementById(`imgContainer${i}`);
+          if (c) c.innerHTML = `<img src="${dataUri}" class="w-full h-full object-cover" id="genImg${i}">`;
+          const dl = document.getElementById(`dlBtn${i}`); if (dl) dl.disabled = false;
+          const sc = document.getElementById(`schedBtn${i}`); if (sc) sc.disabled = false;
+          completed++;
+        } catch (e) {
+          const c = document.getElementById(`imgContainer${i}`);
+          if (c) c.innerHTML = `<p class="text-sm text-red-400 text-center px-4">${e.message}</p>`;
+        }
+      }
+      progressBar.style.width = '100%';
+      progressText.textContent = `Done! ${completed}/${count} static posts`;
+      setTimeout(() => progress.classList.add('hidden'), 3000);
+    }
+
+    function downloadImage(index, title) {
+      const img = document.getElementById(`genImg${index}`); if (!img) return;
+      const c = document.createElement('canvas'); c.width = img.naturalWidth || 1024; c.height = img.naturalHeight || 1024;
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const a = document.createElement('a'); a.download = `vacationpro-${title.toLowerCase().replace(/\s+/g, '-')}.png`; a.href = c.toDataURL('image/png'); a.click();
+    }
+
+    // === REEL BRIEFS (data-driven) ===
+    let _generatedReels = [];
+
+    function generateReelBriefs() {
+      const count = getCount('countReels');
+      const container = document.getElementById('tabContentReels');
+      const hooks = shuffle(REEL_HOOKS);
+      // Augment hooks with top-performer overlay lines for hot takes
+      const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
+      _generatedReels = [];
+
+      for (let i = 0; i < count; i++) {
+        const base = hooks[i % hooks.length];
+        const hotTake = pickUnique(overlayPool, _usedOverlays);
+        // Personalize hook with actual content
+        let hook = base.hook;
+        if (hook.includes('[') || hook.includes('Agree or disagree')) {
+          hook = hook.replace(/\[.*?\]/, hotTake).replace('Agree or disagree?', `Agree or disagree? ${hotTake}`);
+        }
+        _generatedReels.push({ ...base, hook, hotTake, caption: generateCaption() });
+      }
+
+      container.innerHTML = _generatedReels.map((reel, i) => `<div class="card-light rounded-xl p-5 shadow-sm border border-gray-200">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-sm flex items-center gap-2">
+              <span class="bg-pink-100 text-pink-700 text-xs font-medium px-2 py-0.5 rounded-full">Reel</span>
+              Reel #${i + 1}
+            </h4>
+          </div>
+          <div class="space-y-3 text-sm">
+            <div>
+              <p class="text-xs font-medium text-gray-500 uppercase mb-1">Hook (first 3 sec)</p>
+              <p class="font-semibold text-gray-800">"${reel.hook}"</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500 uppercase mb-1">Script / Storyboard</p>
+              <ol class="list-decimal list-inside text-gray-700 text-xs space-y-1">
+                ${reel.formats.map(s => `<li>${s}</li>`).join('')}
+              </ol>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500 uppercase mb-1">Music / Audio</p>
+              <p class="text-gray-700 text-xs">${reel.music}</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500 uppercase mb-1">Caption</p>
+              <textarea id="reelCaption${i}" rows="3" class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-pink-400 resize-none">${reel.caption}</textarea>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="copyReelBrief(${i})" class="text-xs bg-pink-100 hover:bg-pink-200 text-pink-700 font-medium px-3 py-1.5 rounded-lg transition">Copy Brief</button>
+              <button onclick="copyToClipboard(document.getElementById('reelCaption${i}').value)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition">Copy Caption</button>
+            </div>
+          </div>
+        </div>`).join('');
+    }
+
+    function copyReelBrief(index) {
+      const r = _generatedReels[index]; if (!r) return;
+      const brief = `REEL #${index + 1}\n\nHOOK: "${r.hook}"\n\nSCRIPT:\n${r.formats.map((s,i) => `${i+1}. ${s}`).join('\n')}\n\nMUSIC: ${r.music}\n\nCAPTION:\n${document.getElementById('reelCaption' + index)?.value || ''}`;
+      copyToClipboard(brief);
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event?.target; if (!btn) return;
+        const orig = btn.textContent; btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      });
+    }
+
+    // === TEXT POSTS (data-driven) ===
+    function generateTextPosts() {
+      const count = getCount('countText');
+      const bs = loadBrandSettings();
+      const hashtags = bs.hashtags || '';
+      const container = document.getElementById('tabContentText');
+
+      // Pull from top-performing text posts + fallback
+      const dataTexts = extractTextPostPool();
+      const textPool = [...dataTexts, ...FALLBACK_TEXT_POSTS];
+      _usedTexts.clear();
+
+      const drafts = [];
+      for (let i = 0; i < count; i++) {
+        let text = pickUnique(textPool, _usedTexts);
+        // Trim long texts to social-media length
+        if (text.length > 300) text = text.slice(0, 280).replace(/\s+\S*$/, '') + '...';
+        if (hashtags) text += '\n\n' + hashtags;
+        drafts.push(text);
+      }
+
+      container.innerHTML = drafts.map((draft, i) => {
+        const charCount = draft.length;
+        return `<div class="card-light rounded-xl p-4 shadow-sm border border-gray-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">Text Post #${i + 1}</span>
+            <button onclick="openScheduleModal(${i}, 'text')" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium px-2.5 py-1 rounded-lg transition">Schedule</button>
+          </div>
+          <textarea id="textPost${i}" rows="4" class="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none" oninput="updateCharCount(${i})">${draft}</textarea>
+          <div class="flex items-center justify-between mt-1">
+            <span id="charCount${i}" class="text-xs text-gray-400">${charCount} chars</span>
+            <button onclick="copyToClipboard(document.getElementById('textPost${i}').value)" class="text-xs text-gray-500 hover:text-gray-700 transition">Copy</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function updateCharCount(i) {
+      const el = document.getElementById(`textPost${i}`);
+      const counter = document.getElementById(`charCount${i}`);
+      if (el && counter) counter.textContent = el.value.length + ' chars';
+    }
+
+    // === GENERATE ALL ===
+    async function generateAllPosts() {
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true; btn.classList.replace('bg-purple-600', 'bg-gray-500');
+
+      // Generate text + reels immediately (no API calls)
+      generateReelBriefs();
+      generateTextPosts();
+
+      // Generate static posts (needs Gemini API)
+      switchTab('static');
+      try { getGeminiKey(); } catch { btn.disabled = false; btn.classList.replace('bg-gray-500', 'bg-purple-600'); return; }
+      await generateStaticPosts();
+
+      btn.disabled = false; btn.innerHTML = 'Regenerate All'; btn.classList.replace('bg-gray-500', 'bg-purple-600');
+    }
+
+    // Load placeholders on init
+    function initPostGenerator() {
+      renderStaticPlaceholders();
+      generateReelBriefs();
+      generateTextPosts();
+    }
+
+    // --- Scheduling ---
+    let scheduleImageIndex = null;
+    let scheduleType = 'static'; // 'static' or 'text'
+    function openScheduleModal(index, type) {
+      try { getFbCredentials(); } catch (e) { alert(e.message); return; }
+      scheduleImageIndex = index;
+      scheduleType = type || 'static';
+      const preview = document.getElementById('schedulePreview');
+      if (type === 'text') {
+        preview.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-50 text-gray-400 text-sm">Text-only post (no image)</div>';
+        const textCaption = document.getElementById(`textPost${index}`)?.value || '';
+        document.getElementById('scheduleCaption').value = textCaption;
+      } else {
+        const img = document.getElementById(`genImg${index}`);
+        if (img) preview.innerHTML = `<img src="${img.src}" class="w-full h-full object-cover">`;
+        const cardCaption = document.getElementById(`caption${index}`)?.value || generatedCaptions[index] || '';
+        document.getElementById('scheduleCaption').value = cardCaption;
+      }
+      const tmr = new Date(); tmr.setDate(tmr.getDate() + 1); tmr.setHours(9, 0, 0, 0);
+      document.getElementById('scheduleDateTime').value = tmr.toISOString().slice(0, 16);
+      document.getElementById('scheduleStatus').classList.add('hidden');
+      document.getElementById('scheduleSubmitBtn').disabled = false;
+      document.getElementById('scheduleModal').classList.remove('hidden');
+    }
+    function closeScheduleModal() { document.getElementById('scheduleModal').classList.add('hidden'); scheduleImageIndex = null; }
+    function showScheduleStatus(msg, type) {
+      const el = document.getElementById('scheduleStatus'); el.classList.remove('hidden');
+      el.className = `mt-3 text-sm font-medium rounded-lg px-3 py-2 ${type === 'error' ? 'bg-red-50 text-red-600' : type === 'success' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'}`;
+      el.textContent = msg;
+    }
+    async function dataUriToBlob(src) {
+      if (src.startsWith('data:')) return (await fetch(src)).blob();
+      return new Promise((resolve, reject) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); c.toBlob(resolve, 'image/png'); }; img.onerror = reject; img.src = src; });
+    }
+    async function schedulePost() {
+      const { token, pageId } = getFbCredentials();
+      const caption = document.getElementById('scheduleCaption').value.trim();
+      const dateTimeStr = document.getElementById('scheduleDateTime').value;
+      const submitBtn = document.getElementById('scheduleSubmitBtn');
+      if (!caption) { showScheduleStatus('Please enter a caption.', 'error'); return; }
+      if (!dateTimeStr) { showScheduleStatus('Please select a date and time.', 'error'); return; }
+      const scheduledTime = Math.floor(new Date(dateTimeStr).getTime() / 1000);
+      if (scheduledTime < Math.floor(Date.now() / 1000) + 600) { showScheduleStatus('Must be at least 10 minutes in the future.', 'error'); return; }
+      submitBtn.disabled = true; submitBtn.textContent = 'Scheduling...';
+
+      try {
+        if (scheduleType === 'text') {
+          // Text-only post — no photo upload
+          showScheduleStatus('Scheduling text post...', 'info');
+          const pf = new FormData();
+          pf.append('message', caption);
+          pf.append('scheduled_publish_time', scheduledTime.toString());
+          pf.append('published', 'false');
+          pf.append('access_token', token);
+          const pr = await (await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, { method: 'POST', body: pf })).json();
+          if (pr.error) throw new Error(pr.error.message);
+        } else {
+          // Static post — upload image then schedule
+          showScheduleStatus('Step 1/2: Uploading image...', 'info');
+          const imgSrc = generatedImageData[scheduleImageIndex] || document.getElementById(`genImg${scheduleImageIndex}`)?.src;
+          if (!imgSrc) throw new Error('No image found. Generate posts first.');
+          const blob = await dataUriToBlob(imgSrc);
+          const uf = new FormData(); uf.append('source', blob, 'post.png'); uf.append('published', 'false'); uf.append('access_token', token);
+          const ur = await (await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, { method: 'POST', body: uf })).json();
+          if (ur.error) throw new Error(ur.error.message);
+          showScheduleStatus('Step 2/2: Scheduling post...', 'info');
+          const pf = new FormData(); pf.append('message', caption); pf.append('attached_media[0]', JSON.stringify({ media_fbid: ur.id })); pf.append('scheduled_publish_time', scheduledTime.toString()); pf.append('published', 'false'); pf.append('access_token', token);
+          const pr = await (await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, { method: 'POST', body: pf })).json();
+          if (pr.error) throw new Error(pr.error.message);
+        }
+        showScheduleStatus(`Scheduled for ${new Date(dateTimeStr).toLocaleString()}!`, 'success');
+        submitBtn.textContent = 'Done!'; setTimeout(closeScheduleModal, 4000);
+      } catch (e) { showScheduleStatus(`Failed: ${e.message}`, 'error'); submitBtn.disabled = false; submitBtn.textContent = 'Retry'; }
+    }
+  </script>
+</body>
+</html>

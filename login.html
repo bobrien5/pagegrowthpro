@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageGrowthPro — Sign In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-md">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-white tracking-tight">
+        <span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span>
+      </h1>
+      <p class="text-sm text-gray-400 mt-2">Facebook Content Intelligence Platform</p>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 p-8 shadow-2xl">
+      <!-- Tab Toggle -->
+      <div class="flex bg-white/5 rounded-xl p-1 mb-6">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-white text-gray-900 transition">Log In</button>
+        <button id="tabSignup" onclick="switchAuthTab('signup')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg text-gray-400 hover:text-white transition">Sign Up</button>
+      </div>
+
+      <!-- Form -->
+      <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
+        <div id="nameField" class="hidden">
+          <label class="block text-xs font-medium text-gray-300 mb-1">Full Name</label>
+          <input id="authName" type="text" placeholder="Your name" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Email</label>
+          <input id="authEmail" type="email" required placeholder="you@example.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Password</label>
+          <input id="authPassword" type="password" required minlength="6" placeholder="Min 6 characters" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+
+        <!-- Error -->
+        <div id="authError" class="hidden text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-2"></div>
+
+        <!-- Success (for signup confirmation) -->
+        <div id="authSuccess" class="hidden text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-4 py-2"></div>
+
+        <button id="authSubmit" type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
+          <span id="authBtnText">Log In</span>
+          <svg id="authSpinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        </button>
+      </form>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-4 my-6">
+        <div class="flex-1 h-px bg-white/10"></div>
+        <span class="text-xs text-gray-500 uppercase tracking-wide">or</span>
+        <div class="flex-1 h-px bg-white/10"></div>
+      </div>
+
+      <!-- Social Login (placeholder for future) -->
+      <button disabled class="w-full bg-white/5 border border-white/10 text-gray-400 font-medium py-3 rounded-xl text-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+        Continue with Facebook (Coming Soon)
+      </button>
+    </div>
+
+    <p class="text-center text-xs text-gray-500 mt-6">
+      By signing up you agree to our Terms of Service and Privacy Policy.
+    </p>
+  </div>
+
+  <script>
+    let authMode = 'login'; // 'login' or 'signup'
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      document.getElementById('tabLogin').className = `flex-1 py-2.5 text-sm font-semibold rounded-lg transition ${mode === 'login' ? 'bg-white text-gray-900' : 'text-gray-400 hover:text-white'}`;
+      document.getElementById('tabSignup').className = `flex-1 py-2.5 text-sm font-semibold rounded-lg transition ${mode === 'signup' ? 'bg-white text-gray-900' : 'text-gray-400 hover:text-white'}`;
+      document.getElementById('nameField').classList.toggle('hidden', mode === 'login');
+      document.getElementById('authBtnText').textContent = mode === 'login' ? 'Log In' : 'Create Account';
+      document.getElementById('authError').classList.add('hidden');
+      document.getElementById('authSuccess').classList.add('hidden');
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const errorEl = document.getElementById('authError');
+      const successEl = document.getElementById('authSuccess');
+      const spinner = document.getElementById('authSpinner');
+      const btnText = document.getElementById('authBtnText');
+
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
+      spinner.classList.remove('hidden');
+      btnText.textContent = authMode === 'login' ? 'Logging in...' : 'Creating account...';
+
+      try {
+        if (authMode === 'signup') {
+          await signUp(email, password);
+          // Check if email confirmation is required
+          successEl.textContent = 'Account created! Check your email to confirm, then log in.';
+          successEl.classList.remove('hidden');
+          switchAuthTab('login');
+        } else {
+          await signIn(email, password);
+          // Check if user has competitors (onboarding complete)
+          const user = await getUser();
+          const competitors = await getCompetitors(user.id);
+          if (competitors.length === 0) {
+            window.location.href = 'onboarding.html';
+          } else {
+            window.location.href = 'index.html';
+          }
+        }
+      } catch (err) {
+        errorEl.textContent = err.message || 'Something went wrong';
+        errorEl.classList.remove('hidden');
+      } finally {
+        spinner.classList.add('hidden');
+        btnText.textContent = authMode === 'login' ? 'Log In' : 'Create Account';
+      }
+    }
+
+    // If already logged in, redirect
+    (async () => {
+      try {
+        const session = await getSession();
+        if (session) {
+          const competitors = await getCompetitors(session.user.id);
+          window.location.href = competitors.length === 0 ? 'onboarding.html' : 'index.html';
+        }
+      } catch {}
+    })();
+  </script>
+</body>
+</html>

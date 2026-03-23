@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageGrowthPro — Content Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .card-light { background: #ffffff; border: 1px solid #e2e8f0; }
+    canvas { max-height: 300px; }
+    .heatmap-cell { transition: all 0.2s; cursor: default; }
+    .heatmap-cell:hover { transform: scale(1.3); z-index: 10; }
+  </style>
+  <script>tailwind.config = { theme: { extend: { colors: { dark: { 800: '#1e293b', 900: '#0f172a' } } } } }</script>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-bg text-white py-6 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-6">
+          <div>
+            <h1 class="text-2xl font-extrabold tracking-tight"><span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span></h1>
+            <p class="text-gray-400 text-xs mt-0.5">Facebook Content Intelligence</p>
+          </div>
+          <nav class="hidden md:flex items-center gap-1" id="navBar"></nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="postCount" class="text-sm text-gray-400"></span>
+          <label class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg cursor-pointer transition">
+            Load Data <input type="file" id="fileInput" accept=".json" class="hidden">
+          </label>
+          <button onclick="toggleSettings()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition" title="Settings">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="settingsPanel" class="hidden mt-6 bg-white/10 rounded-xl p-5 backdrop-blur-sm">
+        <h3 class="font-semibold text-white mb-4">API Settings</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Google Gemini API Key</label><input id="settingGeminiKey" type="password" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token</label><input id="settingFbToken" type="password" placeholder="EAAx..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page ID</label><input id="settingFbPageId" type="text" placeholder="123456789..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+        </div>
+        <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div id="loadingState" class="max-w-7xl mx-auto px-6 py-20 text-center">
+    <div class="text-6xl mb-4">📅</div>
+    <h2 class="text-2xl font-bold text-gray-700">Load your scraped data</h2>
+    <p class="text-gray-500 mt-2">Click "Load Data" to get started</p>
+  </div>
+
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- Engagement Heatmap -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-2">Best Times to Post — Engagement Heatmap</h3>
+      <p class="text-sm text-gray-500 mb-4">Darker = higher average engagement. Hover for details.</p>
+      <div id="heatmapContainer" class="overflow-x-auto"></div>
+    </section>
+
+    <!-- Optimal Weekly Schedule -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-2">Recommended Weekly Schedule</h3>
+      <p class="text-sm text-gray-500 mb-4">Top 7 posting slots based on competitor engagement data</p>
+      <div id="weeklySchedule" class="grid grid-cols-1 md:grid-cols-7 gap-3"></div>
+    </section>
+
+    <!-- Charts Row -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="card-light rounded-xl p-6 shadow-sm">
+        <h3 class="font-bold text-lg mb-4">Engagement by Hour</h3>
+        <canvas id="chartPostingTimes"></canvas>
+      </div>
+      <div class="card-light rounded-xl p-6 shadow-sm">
+        <h3 class="font-bold text-lg mb-4">Engagement by Day of Week</h3>
+        <canvas id="chartDayOfWeek"></canvas>
+      </div>
+    </section>
+
+    <!-- Add Competitors -->
+    <section class="card-light rounded-xl p-6 shadow-sm border-2 border-dashed border-blue-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="font-bold text-lg">Add Competitor Pages</h3>
+          <p class="text-sm text-gray-500 mt-1">Paste Facebook page URLs to expand your dataset</p>
+        </div>
+        <span id="scrapeStatus" class="text-sm font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-500 hidden"></span>
+      </div>
+      <textarea id="newCompetitors" rows="3" placeholder="https://www.facebook.com/pagename" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"></textarea>
+      <div class="flex items-center gap-4 mt-3">
+        <button id="scrapeBtn" onclick="scrapeNewCompetitors()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Scrape & Add
+        </button>
+      </div>
+      <div id="scrapeLog" class="hidden mt-4 bg-gray-900 text-green-400 rounded-lg p-4 font-mono text-xs max-h-48 overflow-y-auto"></div>
+      <div class="mt-4">
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Tracked Pages</p>
+        <div id="trackedPages" class="flex flex-wrap gap-2"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/dashboard-shared.js"></script>
+  <script>
+    const APIFY_API = 'https://api.apify.com/v2';
+    const ACTOR_ID = 'apify~facebook-posts-scraper';
+
+    document.getElementById('navBar').innerHTML = renderNav('calendar');
+    document.addEventListener('DOMContentLoaded', initSettings);
+
+    initDataLoading(renderDashboard);
+
+    function renderDashboard() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('postCount').textContent = `${posts.length} posts`;
+      renderHeatmap();
+      renderWeeklySchedule();
+      renderCharts();
+      renderTrackedPages();
+    }
+
+    // --- Engagement Heatmap (Day x Hour) ---
+    function renderHeatmap() {
+      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const hours = Array.from({ length: 24 }, (_, i) => i);
+
+      // Build engagement matrix
+      const matrix = {};
+      days.forEach(d => { matrix[d] = {}; hours.forEach(h => { matrix[d][h] = { total: 0, count: 0 }; }); });
+      posts.filter(p => p.dayOfWeek && p.hour !== null).forEach(p => {
+        matrix[p.dayOfWeek][p.hour].total += p.totalEngagement;
+        matrix[p.dayOfWeek][p.hour].count++;
+      });
+
+      let maxAvg = 0;
+      days.forEach(d => hours.forEach(h => {
+        const cell = matrix[d][h];
+        cell.avg = cell.count > 0 ? cell.total / cell.count : 0;
+        if (cell.avg > maxAvg) maxAvg = cell.avg;
+      }));
+
+      const container = document.getElementById('heatmapContainer');
+      let html = '<div class="inline-block min-w-full"><table class="w-full"><thead><tr><th class="text-xs text-gray-400 font-medium pb-2 pr-2 text-left w-20"></th>';
+      // Show every 2 hours to save space
+      hours.forEach(h => { html += `<th class="text-xs text-gray-400 font-medium pb-2 px-0.5 text-center">${h % 3 === 0 ? formatHour(h) : ''}</th>`; });
+      html += '</tr></thead><tbody>';
+
+      days.forEach(d => {
+        html += `<tr><td class="text-xs font-medium text-gray-600 pr-2 py-0.5">${d.slice(0,3)}</td>`;
+        hours.forEach(h => {
+          const cell = matrix[d][h];
+          const intensity = maxAvg > 0 ? cell.avg / maxAvg : 0;
+          const bg = intensity === 0 ? 'bg-gray-100' : '';
+          const color = intensity > 0 ? `rgba(59, 130, 246, ${0.15 + intensity * 0.85})` : '';
+          const style = color ? `background-color: ${color}` : '';
+          html += `<td class="px-0.5 py-0.5"><div class="heatmap-cell w-full aspect-square rounded-sm ${bg}" style="${style}" title="${d} ${formatHour(h)}: ${Math.round(cell.avg)} avg engagement (${cell.count} posts)"></div></td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      // Legend
+      html += '<div class="flex items-center gap-2 mt-3 text-xs text-gray-400"><span>Low</span>';
+      [0.15, 0.35, 0.55, 0.75, 1.0].forEach(i => { html += `<div class="w-6 h-4 rounded-sm" style="background-color: rgba(59, 130, 246, ${i})"></div>`; });
+      html += '<span>High</span></div></div>';
+      container.innerHTML = html;
+    }
+
+    // --- Recommended Weekly Schedule ---
+    function renderWeeklySchedule() {
+      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const slots = [];
+
+      posts.filter(p => p.dayOfWeek && p.hour !== null).forEach(p => {
+        const key = `${p.dayOfWeek}-${p.hour}`;
+        const existing = slots.find(s => s.key === key);
+        if (existing) { existing.total += p.totalEngagement; existing.count++; }
+        else slots.push({ key, day: p.dayOfWeek, hour: p.hour, total: p.totalEngagement, count: 1 });
+      });
+
+      slots.forEach(s => s.avg = s.total / s.count);
+      slots.sort((a, b) => b.avg - a.avg);
+
+      // Pick best slot per day
+      const bestPerDay = {};
+      days.forEach(d => {
+        const daySlots = slots.filter(s => s.day === d && s.count >= 2);
+        bestPerDay[d] = daySlots[0] || null;
+      });
+
+      const maxSlotAvg = Math.max(...Object.values(bestPerDay).filter(Boolean).map(s => s.avg), 1);
+
+      document.getElementById('weeklySchedule').innerHTML = days.map(d => {
+        const slot = bestPerDay[d];
+        const intensity = slot ? slot.avg / maxSlotAvg : 0;
+        const borderColor = intensity > 0.7 ? 'border-blue-500' : intensity > 0.4 ? 'border-blue-300' : 'border-gray-200';
+        const star = intensity > 0.7 ? '<span class="text-yellow-500">&#9733;</span>' : '';
+        return `<div class="card-light rounded-xl p-4 text-center border-2 ${borderColor}">
+          <div class="text-xs font-medium text-gray-400 uppercase">${d.slice(0,3)}</div>
+          <div class="text-lg font-bold mt-1">${slot ? formatHour(slot.hour) : '—'} ${star}</div>
+          <div class="text-xs text-gray-500 mt-1">${slot ? `${Math.round(slot.avg)} avg eng` : 'Low data'}</div>
+          <div class="text-xs text-gray-400">${slot ? `${slot.count} posts` : ''}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // --- Charts ---
+    function renderCharts() {
+      Object.values(chartInstances).forEach(c => c.destroy());
+
+      const hourMap = groupBy(posts.filter(p => p.hour !== null), 'hour');
+      const hours = Array.from({ length: 24 }, (_, i) => i);
+      const hourData = hours.map(h => avgEngagement(hourMap[h] || []));
+
+      chartInstances.postingTimes = new Chart(document.getElementById('chartPostingTimes'), {
+        type: 'line',
+        data: { labels: hours.map(formatHour), datasets: [{ label: 'Avg Engagement', data: hourData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 3 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+
+      const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const dayMap = groupBy(posts.filter(p => p.dayOfWeek), 'dayOfWeek');
+      const dayData = dayOrder.map(d => avgEngagement(dayMap[d] || []));
+
+      chartInstances.dayOfWeek = new Chart(document.getElementById('chartDayOfWeek'), {
+        type: 'bar',
+        data: { labels: dayOrder.map(d => d.slice(0, 3)), datasets: [{ label: 'Avg Engagement', data: dayData, backgroundColor: dayData.map((v) => v === Math.max(...dayData) ? '#3b82f6' : '#cbd5e1'), borderRadius: 8 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // --- Tracked Pages ---
+    function renderTrackedPages() {
+      const pages = [...new Set(posts.map(p => p.pageName))].filter(Boolean);
+      const el = document.getElementById('trackedPages');
+      if (el) el.innerHTML = pages.map(name => `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">${name}</span>`).join('');
+    }
+
+    // --- Scraper ---
+    function logScrape(msg) { const log = document.getElementById('scrapeLog'); log.classList.remove('hidden'); log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`; log.scrollTop = log.scrollHeight; }
+    function setScrapeStatus(text, color) { const el = document.getElementById('scrapeStatus'); el.classList.remove('hidden'); el.className = `text-sm font-medium px-3 py-1 rounded-full ${color}`; el.textContent = text; }
+
+    async function scrapeNewCompetitors() {
+      const textarea = document.getElementById('newCompetitors');
+      const urls = textarea.value.trim().split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+      if (!urls.length) { alert('Paste at least one Facebook page URL'); return; }
+      let token; try { token = getToken(); } catch { return; }
+      const btn = document.getElementById('scrapeBtn');
+      btn.disabled = true; btn.innerHTML = 'Scraping...'; btn.classList.replace('bg-blue-600', 'bg-gray-500');
+      setScrapeStatus('Scraping...', 'bg-yellow-100 text-yellow-700');
+      logScrape(`Starting scrape for ${urls.length} page(s)...`);
+      try {
+        const startRes = await fetch(`${APIFY_API}/acts/${ACTOR_ID}/runs?token=${token}&waitForFinish=300`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startUrls: urls.map(url => ({ url })), resultsLimit: 50 }) });
+        if (!startRes.ok) throw new Error(`Apify error: ${startRes.status}`);
+        const runData = (await startRes.json()).data;
+        let datasetId = runData.defaultDatasetId;
+        if (runData.status !== 'SUCCEEDED') {
+          while (true) {
+            const poll = (await (await fetch(`${APIFY_API}/actor-runs/${runData.id}?token=${token}`)).json()).data;
+            if (poll.status === 'SUCCEEDED') { datasetId = poll.defaultDatasetId; break; }
+            if (poll.status === 'FAILED' || poll.status === 'ABORTED') throw new Error(`Run ${poll.status}`);
+            await new Promise(r => setTimeout(r, 5000)); logScrape('Still running...');
+          }
+        }
+        const rawPosts = await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?token=${token}&format=json&clean=true`)).json();
+        const newAnalyzed = rawPosts.map(analyzePost);
+        posts = [...posts, ...newAnalyzed].sort((a, b) => b.totalEngagement - a.totalEngagement);
+        renderDashboard(); setScrapeStatus(`+${newAnalyzed.length} posts`, 'bg-green-100 text-green-700'); textarea.value = '';
+      } catch (err) { logScrape(`ERROR: ${err.message}`); setScrapeStatus('Error', 'bg-red-100 text-red-700');
+      } finally { btn.disabled = false; btn.innerHTML = 'Scrape & Add'; btn.classList.replace('bg-gray-500', 'bg-blue-600'); }
+    }
+  </script>
+</body>
+</html>

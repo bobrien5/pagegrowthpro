@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageGrowthPro — Your Page Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/meta-login.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .card-light { background: #ffffff; border: 1px solid #e2e8f0; }
+    canvas { max-height: 300px; }
+  </style>
+  <script>tailwind.config = { theme: { extend: { colors: { dark: { 800: '#1e293b', 900: '#0f172a' } } } } }</script>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-bg text-white py-6 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-6">
+          <div>
+            <h1 class="text-2xl font-extrabold tracking-tight"><span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span></h1>
+            <p class="text-gray-400 text-xs mt-0.5">Facebook Content Intelligence</p>
+          </div>
+          <nav class="hidden md:flex items-center gap-1" id="navBar"></nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="postCount" class="text-sm text-gray-400"></span>
+          <label class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg cursor-pointer transition">
+            Load Data <input type="file" id="fileInput" accept=".json" class="hidden">
+          </label>
+          <button onclick="toggleSettings()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition" title="Settings">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="settingsPanel" class="hidden mt-6 bg-white/10 rounded-xl p-5 backdrop-blur-sm">
+        <h3 class="font-semibold text-white mb-4">API Settings</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Google Gemini API Key</label><input id="settingGeminiKey" type="password" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token</label><input id="settingFbToken" type="password" placeholder="EAAx..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page ID</label><input id="settingFbPageId" type="text" placeholder="123456789..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+        </div>
+        <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Connect State -->
+  <div id="connectState" class="max-w-7xl mx-auto px-6 py-20 text-center">
+    <div class="text-6xl mb-4">📈</div>
+    <h2 class="text-2xl font-bold text-gray-700">Connect Your Facebook Page</h2>
+    <p class="text-gray-500 mt-2 max-w-lg mx-auto">Add your Page Access Token and Page ID in Settings (gear icon) to pull your real post performance data from Facebook.</p>
+    <button onclick="toggleSettings()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition">Open Settings</button>
+    <div class="mt-4 text-sm text-gray-400">Or <button onclick="loadPageData()" class="text-blue-600 underline">try loading now</button> if you've already configured your token.</div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- Your Page Summary -->
+    <section class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-6 text-white">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold">Your Page — <span id="yourPageName">allinclusivehq</span></h2>
+          <p class="text-green-200 text-sm mt-1">Live data from Facebook Graph API</p>
+        </div>
+        <button onclick="loadPageData()" class="bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white/10 backdrop-blur rounded-xl p-4">
+          <div class="text-2xl font-bold" id="yourPostCount">—</div>
+          <div class="text-xs text-green-200">Recent Posts</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur rounded-xl p-4">
+          <div class="text-2xl font-bold" id="yourAvgEng">—</div>
+          <div class="text-xs text-green-200">Avg Engagement</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur rounded-xl p-4">
+          <div class="text-2xl font-bold" id="yourTopFormat">—</div>
+          <div class="text-xs text-green-200">Top Format</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur rounded-xl p-4">
+          <div class="text-2xl font-bold" id="yourBestDay">—</div>
+          <div class="text-xs text-green-200">Best Day</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="hidden text-center py-8">
+      <svg class="w-8 h-8 animate-spin mx-auto text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+      <p class="text-sm text-gray-500 mt-3">Fetching data from Facebook...</p>
+    </div>
+
+    <!-- You vs Competitors Comparison -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-4">You vs Competitors — Average Engagement</h3>
+      <canvas id="chartComparison" style="max-height: 400px"></canvas>
+    </section>
+
+    <!-- Your Recent Posts -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-4">Your Recent Posts</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 text-left text-gray-500">
+              <th class="pb-3 pr-4">Date</th>
+              <th class="pb-3 pr-4">Format</th>
+              <th class="pb-3 pr-4">Post Preview</th>
+              <th class="pb-3 pr-4 text-right">Likes</th>
+              <th class="pb-3 pr-4 text-right">Comments</th>
+              <th class="pb-3 pr-4 text-right">Shares</th>
+              <th class="pb-3 pr-4 text-right">Total</th>
+              <th class="pb-3 text-right">vs Avg</th>
+            </tr>
+          </thead>
+          <tbody id="yourPostsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Performance Charts -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="card-light rounded-xl p-6 shadow-sm">
+        <h3 class="font-bold text-lg mb-4">Your Engagement Over Time</h3>
+        <canvas id="chartTimeline"></canvas>
+      </div>
+      <div class="card-light rounded-xl p-6 shadow-sm">
+        <h3 class="font-bold text-lg mb-4">Your Format Performance</h3>
+        <canvas id="chartYourFormats"></canvas>
+      </div>
+    </section>
+
+    <!-- Competitor Breakdown (from scraped data) -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-4">Competitor Breakdown</h3>
+      <p class="text-sm text-gray-500 mb-4">From scraped competitor data — load competitor JSON via "Load Data" button</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 text-left text-gray-500">
+              <th class="pb-3 pr-4">Page</th>
+              <th class="pb-3 pr-4 text-right">Posts</th>
+              <th class="pb-3 pr-4 text-right">Avg Engagement</th>
+              <th class="pb-3 pr-4">Top Format</th>
+              <th class="pb-3 text-right">Best Post</th>
+            </tr>
+          </thead>
+          <tbody id="competitorBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- More Charts -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="card-light rounded-xl p-6 shadow-sm">
+        <h3 class="font-bold text-lg mb-4">Emoji & Hashtag Impact (Competitors)</h3>
+        <canvas id="chartEmojiHashtag"></canvas>
+      </div>
+      <div class="card-light rounded-xl p-6 shadow-sm">
+        <h3 class="font-bold text-lg mb-4">Post Length vs Engagement (Competitors)</h3>
+        <canvas id="chartPostLength"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/dashboard-shared.js"></script>
+  <script>
+    document.getElementById('navBar').innerHTML = renderNav('analytics');
+    document.addEventListener('DOMContentLoaded', initSettings);
+
+    let yourPosts = []; // Posts from your actual page via Graph API
+    const FB_API = 'https://graph.facebook.com/v19.0';
+
+    // Load competitor data from file
+    initDataLoading(renderCompetitorData);
+
+    // Try to auto-load your page data on start
+    setTimeout(() => {
+      const s = loadSettings();
+      if (s.fbPageToken && s.fbPageId) loadPageData();
+    }, 500);
+
+    // --- Fetch YOUR page data from Facebook Graph API ---
+    async function loadPageData() {
+      let token, pageId;
+      try {
+        const creds = getFbCredentials();
+        token = creds.token;
+        pageId = creds.pageId;
+      } catch (e) {
+        alert(e.message);
+        return;
+      }
+
+      document.getElementById('connectState').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('loadingIndicator').classList.remove('hidden');
+
+      try {
+        // Fetch page info
+        const pageRes = await fetch(`${FB_API}/${pageId}?fields=name&access_token=${token}`);
+        const pageInfo = await pageRes.json();
+        if (pageInfo.error) throw new Error(pageInfo.error.message);
+        document.getElementById('yourPageName').textContent = pageInfo.name || 'Your Page';
+
+        // Fetch recent posts with engagement
+        const postsRes = await fetch(`${FB_API}/${pageId}/posts?fields=id,message,created_time,type,permalink_url,shares,attachments{type,subattachments},likes.summary(true),comments.summary(true)&limit=100&access_token=${token}`);
+        const postsData = await postsRes.json();
+        if (postsData.error) throw new Error(postsData.error.message);
+
+        yourPosts = (postsData.data || []).map(p => {
+          const likes = p.likes?.summary?.total_count || 0;
+          const comments = p.comments?.summary?.total_count || 0;
+          const shares = p.shares?.count || 0;
+          const text = p.message || '';
+          const date = p.created_time ? new Date(p.created_time) : null;
+          const permalink = p.permalink_url || '';
+
+          // Detect format
+          let contentType = 'text';
+          const attachType = p.attachments?.data?.[0]?.type || '';
+          const subCount = p.attachments?.data?.[0]?.subattachments?.data?.length || 0;
+          if (permalink.includes('/reel/') || attachType === 'video_inline' && text.length < 100) contentType = 'reel';
+          else if (subCount > 1 || attachType === 'album') contentType = 'carousel';
+          else if (attachType.includes('video') || attachType === 'video_inline') contentType = 'video';
+          else if (attachType.includes('photo') || attachType === 'share') contentType = 'static';
+          else if (attachType.includes('link')) contentType = 'link';
+
+          return {
+            id: p.id,
+            text,
+            postUrl: permalink,
+            contentType,
+            likes, comments, shares,
+            totalEngagement: likes + comments + shares,
+            date: date?.toISOString() || null,
+            dayOfWeek: date ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][date.getDay()] : null,
+            hour: date?.getHours() ?? null,
+          };
+        });
+
+        renderYourPageData();
+      } catch (e) {
+        document.getElementById('loadingIndicator').innerHTML = `
+          <div class="text-red-500 font-medium">Failed to load page data</div>
+          <p class="text-sm text-gray-500 mt-1">${e.message}</p>
+          <button onclick="loadPageData()" class="mt-3 text-sm text-blue-600 underline">Try again</button>
+        `;
+      }
+    }
+
+    // --- Render YOUR page data ---
+    function renderYourPageData() {
+      document.getElementById('loadingIndicator').classList.add('hidden');
+      document.getElementById('connectState').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+
+      // Summary stats
+      document.getElementById('yourPostCount').textContent = yourPosts.length;
+      document.getElementById('yourAvgEng').textContent = avgEngagement(yourPosts).toLocaleString();
+
+      if (yourPosts.length) {
+        const typeMap = groupBy(yourPosts, 'contentType');
+        const topType = Object.entries(typeMap).sort((a, b) => b[1].length - a[1].length)[0]?.[0];
+        document.getElementById('yourTopFormat').textContent = capitalize(topType || '—');
+
+        const dayMap = groupBy(yourPosts.filter(p => p.dayOfWeek), 'dayOfWeek');
+        const dayAvg = Object.entries(dayMap).map(([day, arr]) => ({ day, avg: avgEngagement(arr) })).sort((a, b) => b.avg - a.avg);
+        document.getElementById('yourBestDay').textContent = dayAvg[0]?.day || '—';
+      }
+
+      renderYourPostsTable();
+      renderTimelineChart();
+      renderYourFormatsChart();
+      renderComparisonChart();
+    }
+
+    // --- Your Posts Table ---
+    function renderYourPostsTable() {
+      const competitorAvg = posts.length ? avgEngagement(posts) : 0;
+      const tbody = document.getElementById('yourPostsBody');
+      tbody.innerHTML = yourPosts.slice(0, 30).map(p => {
+        const badge = getTypeBadge(p.contentType);
+        const date = p.date ? new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+        const preview = p.text ? p.text.slice(0, 60) + (p.text.length > 60 ? '...' : '') : '(no text)';
+        const link = p.postUrl ? `<a href="${p.postUrl}" target="_blank" class="hover:underline">${preview}</a>` : preview;
+        const vsAvg = competitorAvg > 0 ? Math.round(((p.totalEngagement - competitorAvg) / competitorAvg) * 100) : 0;
+        const vsColor = vsAvg >= 0 ? 'text-green-600' : 'text-red-500';
+        const vsText = vsAvg >= 0 ? `+${vsAvg}%` : `${vsAvg}%`;
+        return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+          <td class="py-3 pr-4 text-xs text-gray-500">${date}</td>
+          <td class="py-3 pr-4"><span class="text-xs font-medium px-2 py-1 rounded-full ${badge}">${capitalize(p.contentType)}</span></td>
+          <td class="py-3 pr-4 text-gray-600 text-xs max-w-xs truncate">${link}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${p.likes.toLocaleString()}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${p.comments.toLocaleString()}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${p.shares.toLocaleString()}</td>
+          <td class="py-3 pr-4 text-right font-bold tabular-nums text-blue-600">${p.totalEngagement.toLocaleString()}</td>
+          <td class="py-3 text-right font-medium ${vsColor}">${competitorAvg > 0 ? vsText : '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // --- Timeline Chart (your engagement over time) ---
+    function renderTimelineChart() {
+      if (chartInstances.timeline) chartInstances.timeline.destroy();
+      const sorted = [...yourPosts].filter(p => p.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+      if (!sorted.length) return;
+
+      chartInstances.timeline = new Chart(document.getElementById('chartTimeline'), {
+        type: 'line',
+        data: {
+          labels: sorted.map(p => new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+          datasets: [{
+            label: 'Engagement',
+            data: sorted.map(p => p.totalEngagement),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.1)',
+            fill: true, tension: 0.3, pointRadius: 4,
+          }, posts.length ? {
+            label: 'Competitor Avg',
+            data: sorted.map(() => avgEngagement(posts)),
+            borderColor: '#94a3b8',
+            borderDash: [5, 5],
+            pointRadius: 0,
+          } : null].filter(Boolean)
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // --- Your Format Performance ---
+    function renderYourFormatsChart() {
+      if (chartInstances.yourFormats) chartInstances.yourFormats.destroy();
+      const typeMap = groupBy(yourPosts, 'contentType');
+      const data = Object.entries(typeMap).map(([type, arr]) => ({ type: capitalize(type), avg: avgEngagement(arr), count: arr.length })).sort((a, b) => b.avg - a.avg);
+      if (!data.length) return;
+
+      chartInstances.yourFormats = new Chart(document.getElementById('chartYourFormats'), {
+        type: 'bar',
+        data: {
+          labels: data.map(d => `${d.type} (${d.count})`),
+          datasets: [
+            { label: 'Your Avg', data: data.map(d => d.avg), backgroundColor: '#10b981', borderRadius: 8 },
+            posts.length ? {
+              label: 'Competitor Avg',
+              data: data.map(d => {
+                const compType = posts.filter(p => p.contentType === d.type.toLowerCase());
+                return avgEngagement(compType);
+              }),
+              backgroundColor: '#94a3b8', borderRadius: 8,
+            } : null
+          ].filter(Boolean)
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // --- You vs Competitors Chart ---
+    function renderComparisonChart() {
+      if (chartInstances.comparison) chartInstances.comparison.destroy();
+      const pageMap = groupBy(posts, 'pageName');
+      const compData = Object.entries(pageMap).map(([name, arr]) => ({
+        name: name.length > 20 ? name.slice(0, 20) + '...' : name,
+        avg: avgEngagement(arr),
+        isYou: false,
+      })).sort((a, b) => b.avg - a.avg);
+
+      // Insert "You" into the comparison
+      if (yourPosts.length) {
+        compData.push({ name: 'YOU (allinclusivehq)', avg: avgEngagement(yourPosts), isYou: true });
+        compData.sort((a, b) => b.avg - a.avg);
+      }
+
+      chartInstances.comparison = new Chart(document.getElementById('chartComparison'), {
+        type: 'bar',
+        data: {
+          labels: compData.map(d => d.name),
+          datasets: [{
+            label: 'Avg Engagement',
+            data: compData.map(d => d.avg),
+            backgroundColor: compData.map(d => d.isYou ? '#10b981' : '#94a3b8'),
+            borderRadius: 8,
+          }]
+        },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+      });
+    }
+
+    // --- Competitor Data (from scraped JSON) ---
+    function renderCompetitorData() {
+      document.getElementById('postCount').textContent = `${posts.length} competitor posts`;
+
+      // If your page data is loaded too, refresh comparison
+      if (yourPosts.length) {
+        renderComparisonChart();
+        renderYourPostsTable();
+        renderTimelineChart();
+        renderYourFormatsChart();
+      }
+
+      renderCompetitorTable();
+      renderEmojiChart();
+      renderPostLengthChart();
+    }
+
+    function renderCompetitorTable() {
+      const pageMap = groupBy(posts, 'pageName');
+      const rows = Object.entries(pageMap).map(([name, arr]) => {
+        const avg = avgEngagement(arr);
+        const typeMap = groupBy(arr, 'contentType');
+        const topType = Object.entries(typeMap).sort((a, b) => b[1].length - a[1].length)[0]?.[0] || '—';
+        const best = [...arr].sort((a, b) => b.totalEngagement - a.totalEngagement)[0];
+        return { name, count: arr.length, avg, topType, best };
+      }).sort((a, b) => b.avg - a.avg);
+
+      document.getElementById('competitorBody').innerHTML = rows.map(r => {
+        const badge = getTypeBadge(r.topType);
+        const bestLink = r.best?.postUrl ? `<a href="${r.best.postUrl}" target="_blank" class="text-blue-600 hover:underline">${r.best.totalEngagement.toLocaleString()}</a>` : '—';
+        return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+          <td class="py-3 pr-4 font-medium">${r.name}</td>
+          <td class="py-3 pr-4 text-right tabular-nums">${r.count}</td>
+          <td class="py-3 pr-4 text-right font-bold tabular-nums text-blue-600">${r.avg.toLocaleString()}</td>
+          <td class="py-3 pr-4"><span class="text-xs font-medium px-2 py-1 rounded-full ${badge}">${capitalize(r.topType)}</span></td>
+          <td class="py-3 text-right text-xs">${bestLink}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderEmojiChart() {
+      if (chartInstances.emoji) chartInstances.emoji.destroy();
+      const we = posts.filter(p => p.hasEmoji), ne = posts.filter(p => !p.hasEmoji);
+      const wh = posts.filter(p => p.hasHashtag), nh = posts.filter(p => !p.hasHashtag);
+      chartInstances.emoji = new Chart(document.getElementById('chartEmojiHashtag'), {
+        type: 'bar',
+        data: { labels: ['With Emoji', 'No Emoji', 'With Hashtags', 'No Hashtags'], datasets: [{ label: 'Avg Engagement', data: [avgEngagement(we), avgEngagement(ne), avgEngagement(wh), avgEngagement(nh)], backgroundColor: ['#8b5cf6','#cbd5e1','#f59e0b','#cbd5e1'], borderRadius: 8 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    function renderPostLengthChart() {
+      if (chartInstances.postLength) chartInstances.postLength.destroy();
+      const data = posts.filter(p => p.textLength > 0).slice(0, 200).map(p => ({ x: p.textLength, y: p.totalEngagement }));
+      chartInstances.postLength = new Chart(document.getElementById('chartPostLength'), {
+        type: 'scatter',
+        data: { datasets: [{ label: 'Competitor Posts', data, backgroundColor: 'rgba(59,130,246,0.4)', pointRadius: 4 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'Characters' } }, y: { title: { display: true, text: 'Engagement' }, beginAtZero: true } } }
+      });
+    }
+  </script>
+</body>
+</html>

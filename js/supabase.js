@@ -35,7 +35,7 @@ async function signOut() {
   const sb = getSupabase();
   const { error } = await sb.auth.signOut();
   if (error) throw error;
-  window.location.href = 'login.html';
+  window.location.href = '/login';
 }
 
 async function getUser() {
@@ -54,7 +54,7 @@ async function getSession() {
 async function requireAuth() {
   const session = await getSession();
   if (!session) {
-    window.location.href = 'login.html';
+    window.location.href = '/login';
     return null;
   }
   return session.user;
@@ -66,7 +66,7 @@ async function checkOnboarding() {
   if (!user) return;
   const competitors = await getCompetitors(user.id);
   if (!competitors || competitors.length === 0) {
-    window.location.href = 'onboarding.html';
+    window.location.href = '/onboarding';
   }
 }
 

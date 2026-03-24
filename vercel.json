@@ -1,6 +1,12 @@
 {
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/", "destination": "/landing.html" }
+    { "source": "/", "destination": "/landing.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/app", "destination": "/index.html" }
+  ],
+  "redirects": [
+    { "source": "/index", "destination": "/dashboard", "permanent": true }
   ],
   "headers": [
     {

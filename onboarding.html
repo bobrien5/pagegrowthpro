@@ -286,7 +286,7 @@
         }
 
         // 4. Redirect to dashboard
-        window.location.href = 'index.html';
+        window.location.href = '/dashboard';
 
       } catch (err) {
         errorEl.textContent = err.message || 'Something went wrong';
@@ -304,7 +304,7 @@
       // If already onboarded, redirect to dashboard
       const competitors = await getCompetitors(user.id);
       if (competitors.length > 0) {
-        window.location.href = 'index.html';
+        window.location.href = '/dashboard';
       }
     })();
   </script>

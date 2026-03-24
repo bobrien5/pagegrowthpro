@@ -113,9 +113,9 @@
           const user = await getUser();
           const competitors = await getCompetitors(user.id);
           if (competitors.length === 0) {
-            window.location.href = 'onboarding.html';
+            window.location.href = '/onboarding';
           } else {
-            window.location.href = 'index.html';
+            window.location.href = '/dashboard';
           }
         }
       } catch (err) {
@@ -133,7 +133,7 @@
         const session = await getSession();
         if (session) {
           const competitors = await getCompetitors(session.user.id);
-          window.location.href = competitors.length === 0 ? 'onboarding.html' : 'index.html';
+          window.location.href = competitors.length === 0 ? '/onboarding' : '/dashboard';
         }
       } catch {}
     })();
@@ -141,9 +141,9 @@
 
   <footer class="mt-8 py-6 px-4 text-center text-xs text-gray-500">
     <div class="flex flex-wrap justify-center gap-4 mb-2">
-      <a href="/privacy.html" class="hover:text-gray-300 transition">Privacy Policy</a>
-      <a href="/terms.html" class="hover:text-gray-300 transition">Terms of Service</a>
-      <a href="/cookies.html" class="hover:text-gray-300 transition">Cookie Policy</a>
+      <a href="/privacy" class="hover:text-gray-300 transition">Privacy Policy</a>
+      <a href="/terms" class="hover:text-gray-300 transition">Terms of Service</a>
+      <a href="/cookies" class="hover:text-gray-300 transition">Cookie Policy</a>
     </div>
     <p>&copy; 2026 PageGrowthPro. All rights reserved.</p>
   </footer>

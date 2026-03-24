@@ -58,7 +58,7 @@
             <input id="settingFbToken" type="hidden">
             <input id="settingFbPageId" type="hidden">
           </div>
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token <span class="text-gray-500">(optional, for scheduling)</span></label><input id="settingFbTokenManual" type="password" placeholder="EAAx... (from Graph API Explorer)" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Apify API Token</label><input id="settingApifyToken" type="password" placeholder="apify_api_..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
         </div>
         <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
       </div>
@@ -69,9 +69,8 @@
   <div id="connectState" class="max-w-7xl mx-auto px-6 py-20 text-center">
     <div class="text-6xl mb-4">📈</div>
     <h2 class="text-2xl font-bold text-gray-700">Connect Your Facebook Page</h2>
-    <p class="text-gray-500 mt-2 max-w-lg mx-auto">Paste your Facebook page URL in Settings (gear icon) to connect, then add a Page Access Token from the <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-600 underline">Graph API Explorer</a> to pull live analytics.</p>
+    <p class="text-gray-500 mt-2 max-w-lg mx-auto">Paste your Facebook page URL in Settings (gear icon) to see how your posts are performing compared to competitors.</p>
     <button onclick="toggleSettings()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition">Open Settings</button>
-    <div class="mt-4 text-sm text-gray-400">Or <button onclick="loadPageData()" class="text-blue-600 underline">try loading now</button> if you've already configured your token.</div>
   </div>
 
   <!-- Dashboard -->
@@ -82,8 +81,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-xl font-bold">Your Page — <span id="yourPageName">allinclusivehq</span></h2>
-          <p class="text-green-200 text-sm mt-1">Live data from Facebook Graph API</p>
-          <p id="noTokenMessage" class="hidden text-yellow-200 text-xs mt-1">Add a Page Access Token in Settings to load live data. Get one from <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="underline">Graph API Explorer</a>.</p>
+          <p class="text-green-200 text-sm mt-1">Your page performance vs competitors</p>
         </div>
         <button onclick="loadPageData()" class="bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -244,85 +242,109 @@
     // Try to auto-load your page data on start
     setTimeout(() => {
       checkExistingFbConnection();
-      const s = loadSettings();
-      // Need a Page Access Token (from Graph API Explorer) for live analytics
-      if ((s.fbPageToken || s.fbTokenManual) && s.fbPageId) loadPageData();
-      else if (s.fbPageId) {
-        // Page connected but no token — show dashboard with placeholder
-        document.getElementById('connectState').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        document.getElementById('yourPageName').textContent = s.fbPageName || s.fbPageId;
-        document.getElementById('noTokenMessage')?.classList.remove('hidden');
+      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+      if (s.fbPageUrl || s.fbPageId) {
+        loadPageData();
       }
     }, 500);
 
-    // --- Fetch YOUR page data from Facebook Graph API ---
+    // --- Fetch YOUR page data via Apify (no token needed) ---
     async function loadPageData() {
-      const s = loadSettings();
-      let token = s.fbPageToken || s.fbTokenManual;
-      let pageId = s.fbPageId;
+      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+      const pageUrl = s.fbPageUrl;
+      const pageId = s.fbPageId;
 
-      if (!token || !pageId) {
-        // Check if manual token was entered
-        const manualInput = document.getElementById('settingFbTokenManual');
-        if (manualInput?.value.trim()) {
-          token = manualInput.value.trim();
-          const ss = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
-          ss.fbTokenManual = token;
-          localStorage.setItem('vpro_dashboard_settings', JSON.stringify(ss));
-        }
-        if (!token) {
-          alert('Add a Page Access Token from the Graph API Explorer to see live analytics.');
-          return;
-        }
+      if (!pageUrl && !pageId) {
+        alert('Connect your Facebook page first (gear icon → paste your page URL)');
+        return;
       }
 
       document.getElementById('connectState').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
       document.getElementById('loadingIndicator').classList.remove('hidden');
+      document.getElementById('loadingIndicator').innerHTML = `
+        <svg class="w-8 h-8 animate-spin mx-auto text-green-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        <p class="text-sm text-gray-500 mt-3">Scraping your page data via Apify...</p>
+        <p class="text-xs text-gray-400 mt-1">This may take 1-2 minutes on first load</p>
+      `;
+      document.getElementById('yourPageName').textContent = s.fbPageName || pageId;
+
+      // Check if we have cached data (less than 6 hours old)
+      const cacheKey = 'vpro_your_page_posts';
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && cached.pageId === pageId && (Date.now() - cached.timestamp) < 6 * 60 * 60 * 1000) {
+        yourPosts = cached.posts;
+        renderYourPageData();
+        return;
+      }
 
       try {
-        // Fetch page info
-        const pageRes = await fetch(`${FB_API}/${pageId}?fields=name&access_token=${token}`);
-        const pageInfo = await pageRes.json();
-        if (pageInfo.error) throw new Error(pageInfo.error.message);
-        document.getElementById('yourPageName').textContent = pageInfo.name || 'Your Page';
+        const apifyToken = getApifyToken();
+        const scrapeUrl = pageUrl || `https://www.facebook.com/${pageId}`;
 
-        // Fetch recent posts with engagement
-        const postsRes = await fetch(`${FB_API}/${pageId}/posts?fields=id,message,created_time,type,permalink_url,shares,attachments{type,subattachments},likes.summary(true),comments.summary(true)&limit=100&access_token=${token}`);
-        const postsData = await postsRes.json();
-        if (postsData.error) throw new Error(postsData.error.message);
+        // Run Apify Facebook Posts Scraper for your page
+        const startRes = await fetch(`https://api.apify.com/v2/acts/apify~facebook-posts-scraper/runs?token=${apifyToken}&waitForFinish=300`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startUrls: [{ url: scrapeUrl }],
+            resultsLimit: 100,
+          }),
+        });
 
-        yourPosts = (postsData.data || []).map(p => {
-          const likes = p.likes?.summary?.total_count || 0;
-          const comments = p.comments?.summary?.total_count || 0;
-          const shares = p.shares?.count || 0;
-          const text = p.message || '';
-          const date = p.created_time ? new Date(p.created_time) : null;
-          const permalink = p.permalink_url || '';
+        if (!startRes.ok) throw new Error(`Apify error: ${startRes.status}`);
+        const runData = (await startRes.json()).data;
 
-          // Detect format
+        // Poll if not finished
+        let datasetId = runData.defaultDatasetId;
+        if (runData.status !== 'SUCCEEDED') {
+          document.getElementById('loadingIndicator').querySelector('p').textContent = 'Waiting for scrape to complete...';
+          let attempts = 0;
+          while (attempts < 60) {
+            const pollRes = await fetch(`https://api.apify.com/v2/actor-runs/${runData.id}?token=${apifyToken}`);
+            const pollData = (await pollRes.json()).data;
+            if (pollData.status === 'SUCCEEDED') { datasetId = pollData.defaultDatasetId; break; }
+            if (pollData.status === 'FAILED' || pollData.status === 'ABORTED') throw new Error(`Scrape ${pollData.status}`);
+            await new Promise(r => setTimeout(r, 5000));
+            attempts++;
+          }
+        }
+
+        // Download results
+        const dataRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${apifyToken}&format=json&clean=true`);
+        const rawPosts = await dataRes.json();
+
+        yourPosts = rawPosts.map(p => {
+          const likes = p.likes || p.likesCount || 0;
+          const comments = p.comments || p.commentsCount || 0;
+          const shares = p.shares || p.sharesCount || 0;
+          const text = p.text || p.postText || p.message || '';
+          const date = p.time || p.date || p.timestamp || p.postDate;
+          const parsedDate = date ? new Date(date) : null;
+          const postUrl = p.postUrl || p.url || '';
+
           let contentType = 'text';
-          const attachType = p.attachments?.data?.[0]?.type || '';
-          const subCount = p.attachments?.data?.[0]?.subattachments?.data?.length || 0;
-          if (permalink.includes('/reel/') || attachType === 'video_inline' && text.length < 100) contentType = 'reel';
-          else if (subCount > 1 || attachType === 'album') contentType = 'carousel';
-          else if (attachType.includes('video') || attachType === 'video_inline') contentType = 'video';
-          else if (attachType.includes('photo') || attachType === 'share') contentType = 'static';
-          else if (attachType.includes('link')) contentType = 'link';
+          if (p.type) contentType = p.type.toLowerCase();
+          else if (postUrl.includes('/reel/') || p.videoUrl || p.video) contentType = 'reel';
+          else if (p.imageUrl || p.image || (p.images && p.images.length)) contentType = 'static';
+          else if (p.link || p.linkUrl) contentType = 'link';
 
           return {
-            id: p.id,
-            text,
-            postUrl: permalink,
+            text: text.slice(0, 500),
+            fullText: text,
+            postUrl,
             contentType,
             likes, comments, shares,
             totalEngagement: likes + comments + shares,
-            date: date?.toISOString() || null,
-            dayOfWeek: date ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][date.getDay()] : null,
-            hour: date?.getHours() ?? null,
+            date: parsedDate?.toISOString() || null,
+            dayOfWeek: parsedDate ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][parsedDate.getDay()] : null,
+            hour: parsedDate?.getHours() ?? null,
+            pageName: s.fbPageName || pageId,
           };
-        });
+        }).sort((a, b) => b.totalEngagement - a.totalEngagement);
+
+        // Cache results
+        localStorage.setItem(cacheKey, JSON.stringify({ pageId, posts: yourPosts, timestamp: Date.now() }));
 
         renderYourPageData();
       } catch (e) {
@@ -332,6 +354,16 @@
           <button onclick="loadPageData()" class="mt-3 text-sm text-blue-600 underline">Try again</button>
         `;
       }
+    }
+
+    function getApifyToken() {
+      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+      if (s.apifyToken) return s.apifyToken;
+      const token = prompt('Enter your Apify API token to scrape your page data:');
+      if (!token) throw new Error('Apify token required');
+      s.apifyToken = token;
+      localStorage.setItem('vpro_dashboard_settings', JSON.stringify(s));
+      return token;
     }
 
     // --- Render YOUR page data ---

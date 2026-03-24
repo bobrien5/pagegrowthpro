@@ -235,37 +235,70 @@ function updateFbStatusUI(pageName, connected) {
 
 // --- Get pages user manages ---
 async function getConnectedPages(accessToken, userId) {
-  const url = `https://graph.facebook.com/${META_API_VERSION}/${userId}/accounts?access_token=${accessToken}&fields=id,name,access_token,category`;
   console.log('[FB Debug] Fetching pages for user:', userId);
-  const res = await fetch(url);
+
+  // Method 1: Try /me/accounts (personal pages)
+  const res = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${userId}/accounts?access_token=${accessToken}&fields=id,name,access_token,category`);
   const data = await res.json();
-  console.log('[FB Debug] /accounts response:', JSON.stringify(data, null, 2));
+  console.log('[FB Debug] /me/accounts response:', JSON.stringify(data, null, 2));
 
-  if (!res.ok) {
-    throw new Error(data.error?.message || 'Failed to fetch Facebook pages');
+  if (res.ok && data.data && data.data.length > 0) {
+    return data.data;
   }
 
-  if (!data.data || data.data.length === 0) {
-    // Try checking permissions to see what was granted
-    const permRes = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${userId}/permissions?access_token=${accessToken}`);
-    const permData = await permRes.json();
-    console.log('[FB Debug] Granted permissions:', JSON.stringify(permData, null, 2));
+  // Method 2: Try Business Manager pages
+  console.log('[FB Debug] No personal pages found, trying Business Manager...');
+  try {
+    const bizRes = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${userId}/businesses?access_token=${accessToken}`);
+    const bizData = await bizRes.json();
+    console.log('[FB Debug] /businesses response:', JSON.stringify(bizData, null, 2));
 
-    const granted = (permData.data || []).filter(p => p.status === 'granted').map(p => p.permission);
-    const declined = (permData.data || []).filter(p => p.status === 'declined').map(p => p.permission);
-
-    let errMsg = 'No Facebook Pages found.';
-    if (declined.length > 0) {
-      errMsg += ` Declined permissions: ${declined.join(', ')}. Please remove the app from Facebook Settings and try again.`;
-    } else if (!granted.includes('pages_show_list')) {
-      errMsg += ' Missing pages_show_list permission. Remove the app from Facebook Settings → Apps and Websites, then reconnect.';
-    } else {
-      errMsg += ' Make sure you manage at least one Facebook Page and selected it during authorization.';
+    if (bizData.data && bizData.data.length > 0) {
+      const allPages = [];
+      for (const biz of bizData.data) {
+        const pagesRes = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${biz.id}/owned_pages?access_token=${accessToken}&fields=id,name,access_token,category`);
+        const pagesData = await pagesRes.json();
+        console.log(`[FB Debug] Business ${biz.name} pages:`, JSON.stringify(pagesData, null, 2));
+        if (pagesData.data) allPages.push(...pagesData.data);
+      }
+      if (allPages.length > 0) return allPages;
     }
-    throw new Error(errMsg);
+  } catch (e) {
+    console.log('[FB Debug] Business Manager lookup failed:', e.message);
   }
 
-  return data.data;
+  // Method 3: Prompt user to enter their Page ID manually
+  console.log('[FB Debug] All methods failed, prompting for manual Page ID');
+  const pageId = prompt(
+    'Your page is managed by Meta Business Suite and couldn\'t be detected automatically.\n\n' +
+    'Enter your Facebook Page ID or URL:\n' +
+    '(Find it at facebook.com/your-page → About → Page ID)\n\n' +
+    'Example: 100480825895257 or https://facebook.com/allinclusivehq'
+  );
+
+  if (!pageId) throw new Error('Facebook connection cancelled');
+
+  // Extract page ID from URL or use directly
+  let cleanId = pageId.trim();
+  if (cleanId.includes('facebook.com/')) {
+    cleanId = cleanId.split('facebook.com/')[1].replace(/\/$/, '').split('?')[0];
+  }
+
+  // Look up the page
+  const pageRes = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${cleanId}?fields=id,name,access_token&access_token=${accessToken}`);
+  const pageData = await pageRes.json();
+  console.log('[FB Debug] Direct page lookup:', JSON.stringify(pageData, null, 2));
+
+  if (pageData.error) {
+    throw new Error(`Could not find page: ${pageData.error.message}`);
+  }
+
+  if (!pageData.access_token) {
+    // No page token returned — use the user token as fallback
+    pageData.access_token = accessToken;
+  }
+
+  return [{ id: pageData.id, name: pageData.name, access_token: pageData.access_token, category: pageData.category || '' }];
 }
 
 // --- Disconnect Page ---

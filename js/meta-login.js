@@ -238,13 +238,37 @@ function updateFbStatusUI(pageName, connected) {
 
 // --- Get pages user manages ---
 async function getConnectedPages(accessToken, userId) {
-  const res = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${userId}/accounts?access_token=${accessToken}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || 'Failed to fetch Facebook pages');
-  }
+  const url = `https://graph.facebook.com/${META_API_VERSION}/${userId}/accounts?access_token=${accessToken}&fields=id,name,access_token,category`;
+  console.log('[FB Debug] Fetching pages for user:', userId);
+  const res = await fetch(url);
   const data = await res.json();
-  return data.data || [];
+  console.log('[FB Debug] /accounts response:', JSON.stringify(data, null, 2));
+
+  if (!res.ok) {
+    throw new Error(data.error?.message || 'Failed to fetch Facebook pages');
+  }
+
+  if (!data.data || data.data.length === 0) {
+    // Try checking permissions to see what was granted
+    const permRes = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${userId}/permissions?access_token=${accessToken}`);
+    const permData = await permRes.json();
+    console.log('[FB Debug] Granted permissions:', JSON.stringify(permData, null, 2));
+
+    const granted = (permData.data || []).filter(p => p.status === 'granted').map(p => p.permission);
+    const declined = (permData.data || []).filter(p => p.status === 'declined').map(p => p.permission);
+
+    let errMsg = 'No Facebook Pages found.';
+    if (declined.length > 0) {
+      errMsg += ` Declined permissions: ${declined.join(', ')}. Please remove the app from Facebook Settings and try again.`;
+    } else if (!granted.includes('pages_show_list')) {
+      errMsg += ' Missing pages_show_list permission. Remove the app from Facebook Settings → Apps and Websites, then reconnect.';
+    } else {
+      errMsg += ' Make sure you manage at least one Facebook Page and selected it during authorization.';
+    }
+    throw new Error(errMsg);
+  }
+
+  return data.data;
 }
 
 // --- Disconnect Page ---

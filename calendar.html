@@ -88,26 +88,46 @@
       </div>
     </section>
 
-    <!-- Add Competitors -->
-    <section class="card-light rounded-xl p-6 shadow-sm border-2 border-dashed border-blue-200">
-      <div class="flex items-start justify-between mb-4">
+    <!-- Content Calendar -->
+    <section class="card-light rounded-xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="font-bold text-lg">Add Competitor Pages</h3>
-          <p class="text-sm text-gray-500 mt-1">Paste Facebook page URLs to expand your dataset</p>
+          <h3 class="font-bold text-lg">Content Calendar</h3>
+          <p class="text-sm text-gray-500 mt-1">Your published and scheduled posts</p>
         </div>
-        <span id="scrapeStatus" class="text-sm font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-500 hidden"></span>
+        <div class="flex items-center gap-2">
+          <button onclick="prevMonth()" class="p-1.5 rounded-lg hover:bg-gray-100 transition">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <span id="calendarMonth" class="text-sm font-semibold text-gray-700 w-32 text-center"></span>
+          <button onclick="nextMonth()" class="p-1.5 rounded-lg hover:bg-gray-100 transition">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
       </div>
-      <textarea id="newCompetitors" rows="3" placeholder="https://www.facebook.com/pagename" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"></textarea>
-      <div class="flex items-center gap-4 mt-3">
-        <button id="scrapeBtn" onclick="scrapeNewCompetitors()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Scrape & Add
-        </button>
+      <!-- Legend -->
+      <div class="flex items-center gap-4 mb-3 text-xs text-gray-500">
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Published</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Scheduled</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Draft</span>
       </div>
-      <div id="scrapeLog" class="hidden mt-4 bg-gray-900 text-green-400 rounded-lg p-4 font-mono text-xs max-h-48 overflow-y-auto"></div>
-      <div class="mt-4">
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Tracked Pages</p>
-        <div id="trackedPages" class="flex flex-wrap gap-2"></div>
+      <!-- Calendar Grid -->
+      <div class="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
+        <!-- Day headers -->
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Mon</div>
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Tue</div>
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Wed</div>
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Thu</div>
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Fri</div>
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Sat</div>
+        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Sun</div>
+        <!-- Calendar cells injected by JS -->
+      </div>
+      <div id="calendarGrid" class="grid grid-cols-7 gap-px bg-gray-200 overflow-hidden rounded-b-xl"></div>
+      <!-- Upcoming scheduled posts list -->
+      <div id="upcomingPosts" class="mt-6 hidden">
+        <h4 class="font-semibold text-sm text-gray-700 mb-3">Upcoming Scheduled Posts</h4>
+        <div id="upcomingList" class="space-y-2"></div>
       </div>
     </section>
   </div>
@@ -129,7 +149,7 @@
       renderHeatmap();
       renderWeeklySchedule();
       renderCharts();
-      renderTrackedPages();
+      renderCalendar();
     }
 
     // --- Engagement Heatmap (Day x Hour) ---
@@ -242,45 +262,162 @@
       });
     }
 
-    // --- Tracked Pages ---
-    function renderTrackedPages() {
-      const pages = [...new Set(posts.map(p => p.pageName))].filter(Boolean);
-      const el = document.getElementById('trackedPages');
-      if (el) el.innerHTML = pages.map(name => `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">${name}</span>`).join('');
+    // --- Content Calendar ---
+    let calendarDate = new Date();
+    const SCHEDULE_KEY = 'vpro_scheduled_posts';
+
+    function getScheduledPosts() {
+      return JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
     }
 
-    // --- Scraper ---
-    function logScrape(msg) { const log = document.getElementById('scrapeLog'); log.classList.remove('hidden'); log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`; log.scrollTop = log.scrollHeight; }
-    function setScrapeStatus(text, color) { const el = document.getElementById('scrapeStatus'); el.classList.remove('hidden'); el.className = `text-sm font-medium px-3 py-1 rounded-full ${color}`; el.textContent = text; }
+    function getYourPagePosts() {
+      // Get your page's posts from the scraped data or cached analytics
+      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+      const pageName = s.fbPageName || s.fbPageId || '';
+      // Check analytics cache
+      const cached = JSON.parse(localStorage.getItem('vpro_your_page_posts') || 'null');
+      if (cached && cached.posts) return cached.posts;
+      // Fallback: filter from competitor data if your page is in there
+      if (pageName && posts.length) {
+        return posts.filter(p => {
+          const pn = (p.pageName || '').toLowerCase();
+          return pn.includes(pageName.toLowerCase()) || pn.includes('allinclusivehq') || pn.includes('vacationpro');
+        });
+      }
+      return [];
+    }
 
-    async function scrapeNewCompetitors() {
-      const textarea = document.getElementById('newCompetitors');
-      const urls = textarea.value.trim().split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
-      if (!urls.length) { alert('Paste at least one Facebook page URL'); return; }
-      let token; try { token = getToken(); } catch { return; }
-      const btn = document.getElementById('scrapeBtn');
-      btn.disabled = true; btn.innerHTML = 'Scraping...'; btn.classList.replace('bg-blue-600', 'bg-gray-500');
-      setScrapeStatus('Scraping...', 'bg-yellow-100 text-yellow-700');
-      logScrape(`Starting scrape for ${urls.length} page(s)...`);
-      try {
-        const startRes = await fetch(`${APIFY_API}/acts/${ACTOR_ID}/runs?token=${token}&waitForFinish=300`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startUrls: urls.map(url => ({ url })), resultsLimit: 50 }) });
-        if (!startRes.ok) throw new Error(`Apify error: ${startRes.status}`);
-        const runData = (await startRes.json()).data;
-        let datasetId = runData.defaultDatasetId;
-        if (runData.status !== 'SUCCEEDED') {
-          while (true) {
-            const poll = (await (await fetch(`${APIFY_API}/actor-runs/${runData.id}?token=${token}`)).json()).data;
-            if (poll.status === 'SUCCEEDED') { datasetId = poll.defaultDatasetId; break; }
-            if (poll.status === 'FAILED' || poll.status === 'ABORTED') throw new Error(`Run ${poll.status}`);
-            await new Promise(r => setTimeout(r, 5000)); logScrape('Still running...');
-          }
+    function prevMonth() { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); }
+    function nextMonth() { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); }
+
+    function renderCalendar() {
+      const year = calendarDate.getFullYear();
+      const month = calendarDate.getMonth();
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('calendarMonth').textContent = `${monthNames[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+      const totalDays = lastDay.getDate();
+      const today = new Date();
+
+      // Get post data
+      const yourPosts = getYourPagePosts();
+      const scheduled = getScheduledPosts();
+
+      // Build day -> posts map
+      const publishedMap = {};
+      yourPosts.forEach(p => {
+        if (!p.date) return;
+        const d = new Date(p.date);
+        if (d.getMonth() === month && d.getFullYear() === year) {
+          const key = d.getDate();
+          if (!publishedMap[key]) publishedMap[key] = [];
+          publishedMap[key].push(p);
         }
-        const rawPosts = await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?token=${token}&format=json&clean=true`)).json();
-        const newAnalyzed = rawPosts.map(analyzePost);
-        posts = [...posts, ...newAnalyzed].sort((a, b) => b.totalEngagement - a.totalEngagement);
-        renderDashboard(); setScrapeStatus(`+${newAnalyzed.length} posts`, 'bg-green-100 text-green-700'); textarea.value = '';
-      } catch (err) { logScrape(`ERROR: ${err.message}`); setScrapeStatus('Error', 'bg-red-100 text-red-700');
-      } finally { btn.disabled = false; btn.innerHTML = 'Scrape & Add'; btn.classList.replace('bg-gray-500', 'bg-blue-600'); }
+      });
+
+      const scheduledMap = {};
+      scheduled.forEach(p => {
+        if (!p.scheduledTime) return;
+        const d = new Date(p.scheduledTime);
+        if (d.getMonth() === month && d.getFullYear() === year) {
+          const key = d.getDate();
+          if (!scheduledMap[key]) scheduledMap[key] = [];
+          scheduledMap[key].push(p);
+        }
+      });
+
+      let html = '';
+
+      // Empty cells before first day
+      for (let i = 0; i < startOffset; i++) {
+        html += '<div class="bg-gray-50 min-h-[80px] p-1"></div>';
+      }
+
+      // Day cells
+      for (let day = 1; day <= totalDays; day++) {
+        const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+        const isPast = new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const pub = publishedMap[day] || [];
+        const sched = scheduledMap[day] || [];
+        const hasPosts = pub.length + sched.length > 0;
+
+        html += `<div class="bg-white min-h-[80px] p-1.5 ${isToday ? 'ring-2 ring-inset ring-blue-500' : ''} ${isPast ? 'opacity-60' : ''}">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium ${isToday ? 'bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-500'}">${day}</span>
+            ${hasPosts ? `<span class="text-[10px] text-gray-400">${pub.length + sched.length}</span>` : ''}
+          </div>`;
+
+        // Show up to 3 post indicators
+        const allEvents = [
+          ...pub.map(p => ({ type: 'published', text: (p.text || p.fullText || '').slice(0, 25), eng: p.totalEngagement, contentType: p.contentType })),
+          ...sched.map(p => ({ type: 'scheduled', text: (p.caption || '').slice(0, 25), contentType: p.postType || 'static' })),
+        ];
+
+        allEvents.slice(0, 3).forEach(ev => {
+          const color = ev.type === 'published' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+          const icon = ev.contentType === 'reel' ? '🎬' : ev.contentType === 'static' ? '🖼️' : '📝';
+          html += `<div class="text-[10px] ${color} border rounded px-1 py-0.5 mb-0.5 truncate" title="${ev.text || 'Post'}">${icon} ${ev.text || ev.type}</div>`;
+        });
+        if (allEvents.length > 3) {
+          html += `<div class="text-[10px] text-gray-400">+${allEvents.length - 3} more</div>`;
+        }
+
+        html += '</div>';
+      }
+
+      // Fill remaining cells
+      const totalCells = startOffset + totalDays;
+      const remaining = (7 - (totalCells % 7)) % 7;
+      for (let i = 0; i < remaining; i++) {
+        html += '<div class="bg-gray-50 min-h-[80px] p-1"></div>';
+      }
+
+      document.getElementById('calendarGrid').innerHTML = html;
+
+      // Render upcoming scheduled posts
+      renderUpcomingPosts(scheduled);
+    }
+
+    function renderUpcomingPosts(scheduled) {
+      const now = new Date();
+      const upcoming = scheduled
+        .filter(p => new Date(p.scheduledTime) > now)
+        .sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+
+      const container = document.getElementById('upcomingPosts');
+      const list = document.getElementById('upcomingList');
+
+      if (upcoming.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      list.innerHTML = upcoming.slice(0, 10).map(p => {
+        const dt = new Date(p.scheduledTime);
+        const dateStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const icon = p.postType === 'reel' ? '🎬' : p.postType === 'text' ? '📝' : '🖼️';
+        return `<div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+          <div class="text-xl">${icon}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-700 truncate">${p.caption || 'Untitled post'}</p>
+            <p class="text-xs text-gray-500">${dateStr} at ${timeStr}</p>
+          </div>
+          <button onclick="removeScheduledPost('${p.id}')" class="text-xs text-red-400 hover:text-red-600 transition" title="Remove">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    function removeScheduledPost(id) {
+      const scheduled = getScheduledPosts().filter(p => p.id !== id);
+      localStorage.setItem(SCHEDULE_KEY, JSON.stringify(scheduled));
+      renderCalendar();
     }
   </script>
 

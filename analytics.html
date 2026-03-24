@@ -41,35 +41,41 @@
       </div>
       <div id="mobileMenu" class="hidden md:hidden pb-4 space-y-1"></div>
       <div id="settingsPanel" class="hidden mt-2 mb-4 bg-white/10 rounded-xl p-4 sm:p-5 backdrop-blur-sm">
-        <h3 class="font-semibold text-white mb-4">Settings</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-300 mb-1">Your Facebook Page</label>
-            <div id="fbConnectionStatus" class="mb-2"><span class="text-xs text-gray-400">Not connected</span></div>
-            <div id="fbConnectForm">
-              <input id="settingFbPageUrl" type="text" placeholder="https://facebook.com/yourpage" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
-              <button onclick="handleFbConnect()" id="fbConnectBtn" class="bg-[#1877F2] hover:bg-[#166FE5] text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2 w-full justify-center">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                Connect Page
-              </button>
-            </div>
-            <input id="settingFbToken" type="hidden">
-            <input id="settingFbPageId" type="hidden">
+        <h3 class="font-semibold text-white mb-4">Connect Your Facebook Page</h3>
+        <div class="max-w-md">
+          <div id="fbConnectionStatus" class="mb-3"><span class="text-xs text-gray-400">Not connected</span></div>
+          <div id="fbConnectForm">
+            <input id="settingFbPageUrl" type="text" placeholder="https://facebook.com/yourpage" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+            <button onclick="handleFbConnect()" id="fbConnectBtn" class="bg-[#1877F2] hover:bg-[#166FE5] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition flex items-center gap-2 w-full justify-center">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              Connect Page
+            </button>
           </div>
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Apify API Token</label><input id="settingApifyToken" type="password" placeholder="apify_api_..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"><input id="settingGeminiKey" type="hidden"></div>
+          <input id="settingFbToken" type="hidden">
+          <input id="settingFbPageId" type="hidden">
+          <input id="settingGeminiKey" type="hidden">
         </div>
-        <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
       </div>
     </div>
   </header>
   <input type="file" id="fileInput" accept=".json" class="hidden">
 
   <!-- Connect State -->
-  <div id="connectState" class="max-w-7xl mx-auto px-6 py-20 text-center">
-    <div class="text-6xl mb-4">📈</div>
-    <h2 class="text-2xl font-bold text-gray-700">Connect Your Facebook Page</h2>
-    <p class="text-gray-500 mt-2 max-w-lg mx-auto">Paste your Facebook page URL in Settings (gear icon) to see how your posts are performing compared to competitors.</p>
-    <button onclick="toggleSettings()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition">Open Settings</button>
+  <div id="connectState" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
+    <div class="max-w-md mx-auto">
+      <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-800">See how your page is performing</h2>
+      <p class="text-gray-500 mt-2 mb-6">Connect your Facebook page to compare your posts against competitors.</p>
+      <div id="connectFormInline">
+        <input id="connectPageUrlInline" type="text" placeholder="https://facebook.com/yourpage" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3">
+        <button onclick="connectFromInline()" class="bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium px-6 py-3 rounded-lg transition flex items-center gap-2 w-full justify-center">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          Connect Facebook Page
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Dashboard -->
@@ -359,11 +365,34 @@
     function getApifyToken() {
       const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
       if (s.apifyToken) return s.apifyToken;
-      const token = prompt('Enter your Apify API token to scrape your page data:');
-      if (!token) throw new Error('Apify token required');
-      s.apifyToken = token;
+      throw new Error('Apify token not configured. Set it in the Insights page settings.');
+    }
+
+    // Inline connect from the connect state page
+    function connectFromInline() {
+      const input = document.getElementById('connectPageUrlInline');
+      const rawUrl = input?.value.trim();
+      if (!rawUrl) { input.focus(); return; }
+
+      let pageId = rawUrl;
+      if (rawUrl.includes('facebook.com')) {
+        try {
+          const url = new URL(rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl);
+          const path = url.pathname.replace(/^\//, '').replace(/\/$/, '');
+          if (url.searchParams.get('id')) pageId = url.searchParams.get('id');
+          else if (path) pageId = path.split('/')[0];
+        } catch {}
+      }
+      const pageName = pageId.replace(/[_.-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+      s.fbPageId = pageId; s.fbPageName = pageName; s.fbPageUrl = rawUrl; s.fbConnectedAt = new Date().toISOString();
       localStorage.setItem('vpro_dashboard_settings', JSON.stringify(s));
-      return token;
+
+      // Also populate settings form if visible
+      const settingsUrl = document.getElementById('settingFbPageUrl');
+      if (settingsUrl) settingsUrl.value = rawUrl;
+
+      loadPageData();
     }
 
     // --- Render YOUR page data ---

@@ -88,24 +88,21 @@ async function connectFacebookPage() {
 
   let authResponse;
 
-  if (statusResponse.status === 'connected') {
-    // Already logged in — use existing token
-    authResponse = statusResponse.authResponse;
-  } else {
-    // Need to trigger login popup
-    authResponse = await new Promise((resolve, reject) => {
-      FB.login((response) => {
-        if (response.authResponse) {
-          resolve(response.authResponse);
-        } else {
-          reject(new Error('Facebook login cancelled or failed'));
-        }
-      }, {
-        scope: 'pages_manage_posts,pages_read_engagement,pages_show_list,pages_read_user_content',
-        return_scopes: true,
-      });
+  // Always force re-authorization to ensure page selection screen appears
+  // This fixes the issue where a user skipped page selection on first login
+  authResponse = await new Promise((resolve, reject) => {
+    FB.login((response) => {
+      if (response.authResponse) {
+        resolve(response.authResponse);
+      } else {
+        reject(new Error('Facebook login cancelled or failed'));
+      }
+    }, {
+      scope: 'pages_manage_posts,pages_read_engagement,pages_show_list,pages_read_user_content',
+      auth_type: 'rerequest',
+      return_scopes: true,
     });
-  }
+  });
 
   const shortLivedToken = authResponse.accessToken;
   const fbUserId = authResponse.userID;

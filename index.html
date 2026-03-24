@@ -56,12 +56,28 @@
             <p class="text-xs text-gray-400 mt-1">Free at <a href="https://aistudio.google.com/apikey" target="_blank" class="text-blue-400 underline">aistudio.google.com</a></p>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token</label>
-            <input id="settingFbToken" type="password" placeholder="EAAx..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page ID</label>
-            <input id="settingFbPageId" type="text" placeholder="123456789..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page</label>
+            <div id="fbConnectionStatus" class="mb-2">
+              <span class="text-xs text-gray-400">Not connected</span>
+            </div>
+            <div id="fbLoginBtnContainer" class="mb-2">
+              <fb:login-button
+                scope="pages_manage_posts,pages_read_engagement,pages_show_list,pages_read_user_content"
+                onlogin="checkLoginState();"
+                data-size="medium"
+                data-button-type="continue_with"
+                data-layout="default"
+                data-auto-logout-link="false"
+                data-use-continue-as="true"
+                data-width="">
+              </fb:login-button>
+            </div>
+            <button onclick="handleFbConnect()" id="fbConnectBtn" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              Reconnect Page
+            </button>
+            <input id="settingFbToken" type="hidden">
+            <input id="settingFbPageId" type="hidden">
           </div>
         </div>
         <div class="flex items-center gap-4 mt-4">
@@ -69,7 +85,7 @@
           <span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span>
         </div>
         <details class="mt-4">
-          <summary class="cursor-pointer text-sm font-medium text-blue-400 hover:text-blue-300">How to get a Facebook Page Access Token</summary>
+          <summary class="cursor-pointer text-sm font-medium text-blue-400 hover:text-blue-300">Manual Facebook Setup (Advanced)</summary>
           <ol class="mt-2 space-y-1 text-xs text-gray-300 list-decimal list-inside">
             <li>Go to <a href="https://developers.facebook.com" target="_blank" class="text-blue-400 underline">developers.facebook.com</a> and create an App (type: Business)</li>
             <li>Open <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-400 underline">Graph API Explorer</a>, select your App</li>
@@ -398,9 +414,89 @@
 
   <script src="js/dashboard-shared.js"></script>
   <script>
+    // --- Facebook Login Button Callback (called by fb:login-button) ---
+    function checkLoginState() {
+      FB.getLoginStatus(function(response) {
+        statusChangeCallback(response);
+      });
+    }
+
+    async function statusChangeCallback(response) {
+      const statusEl = document.getElementById('fbConnectionStatus');
+      const loginBtnContainer = document.getElementById('fbLoginBtnContainer');
+      const reconnectBtn = document.getElementById('fbConnectBtn');
+
+      if (response.status === 'connected') {
+        // Person is logged into Facebook AND authorized your app
+        if (statusEl) statusEl.innerHTML = '<span class="text-xs text-yellow-400">Fetching your pages...</span>';
+        try {
+          const result = await connectFacebookPage();
+          updateFbStatusUI(result.pageName, true);
+          // Hide the FB login button, show reconnect
+          if (loginBtnContainer) loginBtnContainer.classList.add('hidden');
+          if (reconnectBtn) reconnectBtn.classList.remove('hidden');
+        } catch (err) {
+          if (statusEl) statusEl.innerHTML = `<span class="text-xs text-red-400">${err.message}</span>`;
+        }
+      } else if (response.status === 'not_authorized') {
+        // Logged into Facebook but hasn't authorized the app
+        if (statusEl) statusEl.innerHTML = '<span class="text-xs text-yellow-400">Please authorize PageGrowthPro to manage your page</span>';
+        if (loginBtnContainer) loginBtnContainer.classList.remove('hidden');
+        if (reconnectBtn) reconnectBtn.classList.add('hidden');
+      } else {
+        // Not logged into Facebook
+        if (statusEl) statusEl.innerHTML = '<span class="text-xs text-gray-400">Not connected — log in with Facebook above</span>';
+        if (loginBtnContainer) loginBtnContainer.classList.remove('hidden');
+        if (reconnectBtn) reconnectBtn.classList.add('hidden');
+      }
+    }
+
+    // --- Manual reconnect handler ---
+    async function handleFbConnect() {
+      const btn = document.getElementById('fbConnectBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Connecting...';
+      try {
+        const result = await connectFacebookPage();
+        updateFbStatusUI(result.pageName, true);
+      } catch (err) {
+        const statusEl = document.getElementById('fbConnectionStatus');
+        if (statusEl) statusEl.innerHTML = `<span class="text-xs text-red-400">${err.message}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Reconnect Page';
+      }
+    }
+
+    // Check existing connection on page load
+    function checkExistingFbConnection() {
+      const conn = getStoredPageConnection();
+      if (conn) {
+        updateFbStatusUI(conn.pageName, true);
+        // Already connected — hide FB login button, show reconnect
+        const loginBtnContainer = document.getElementById('fbLoginBtnContainer');
+        const reconnectBtn = document.getElementById('fbConnectBtn');
+        if (loginBtnContainer) loginBtnContainer.classList.add('hidden');
+        if (reconnectBtn) reconnectBtn.classList.remove('hidden');
+      }
+      // Listen for FB SDK ready — auto-checks login status
+      window.addEventListener('fb-sdk-ready', (e) => {
+        if (e.detail.status === 'connected') {
+          const conn = getStoredPageConnection();
+          if (conn) {
+            updateFbStatusUI(conn.pageName, true);
+            const loginBtnContainer = document.getElementById('fbLoginBtnContainer');
+            const reconnectBtn = document.getElementById('fbConnectBtn');
+            if (loginBtnContainer) loginBtnContainer.classList.add('hidden');
+            if (reconnectBtn) reconnectBtn.classList.remove('hidden');
+          }
+        }
+      });
+    }
+
     // --- Init ---
     document.getElementById('navBar').innerHTML = renderNav('insights');
-    document.addEventListener('DOMContentLoaded', initSettings);
+    document.addEventListener('DOMContentLoaded', () => { initSettings(); checkExistingFbConnection(); });
 
     initDataLoading(function renderDashboard() {
       document.getElementById('loadingState').classList.add('hidden');
@@ -668,22 +764,41 @@
       return { statics, texts, all: sorted };
     }
 
-    // Pull real overlay lines from top static posts
+    // Pull overlay lines from scraped data — STRICT filter
+    // Real overlays are 20+ char complete statements, NOT short emoji captions
     function extractOverlayLines() {
       const { statics, all } = getTopPerformers();
       const source = statics.length >= 5 ? statics : all;
       const lines = [];
-      source.slice(0, 40).forEach(p => {
+      source.slice(0, 60).forEach(p => {
         const t = (p.fullText || p.text || '').trim();
-        // Good overlay = short, punchy, 5-80 chars, no links
-        if (t.length >= 5 && t.length <= 120 && !t.includes('http') && !t.includes('www.')) {
-          // Take first sentence/line
-          const first = t.split(/[\n.!?]/)[0].trim();
-          if (first.length >= 5 && first.length <= 100) lines.push(first);
-          else if (t.length <= 100) lines.push(t);
-        }
+        // REJECT: too short, just emojis, just a question, links, single words
+        if (t.length < 20) return;
+        if (t.length > 120) return;
+        if (t.includes('http') || t.includes('www.')) return;
+        // Reject emoji-only or emoji-heavy (more emojis than words)
+        const emojiCount = (t.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu) || []).length;
+        const wordCount = t.split(/\s+/).filter(w => w.length > 1).length;
+        if (emojiCount > wordCount) return;
+        if (wordCount < 4) return;
+        // Reject FB caption patterns (these are NOT image overlay text)
+        // Image overlay text is a STATEMENT/QUOTE, not a caption, question, or CTA
+        if (/^(yes|no|true|indeed|agree|disagree|exactly|same|mood|this|wow|omg|lol)/i.test(t)) return;
+        if (/^(who else|who are you|who is|tag |send this|can't wait|happy |good morning|hello |tell me)/i.test(t)) return;
+        if (/^(like|share|follow|comment|drop a|there's always|if you know)/i.test(t)) return;
+        if (/^(once you|pause|adding this|time flies|we made it|midweek|soon)/i.test(t)) return;
+        if (/^(it doesn't take|priorities|early mornings|mind off)/i.test(t)) return;
+        // Reject day-of-week greetings and check-ins
+        if (/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(t)) return;
+        // Reject engagement bait, CTAs, and promotional text
+        if (/like.+share|share.+follow|follow for more|tag someone|comment below|this might help/i.test(t)) return;
+        if (/\?/.test(t)) return; // Questions are FB captions, not image overlays
+        // Must have 6+ words to be a real quote
+        if (wordCount < 6) return;
+        // Take first sentence/line as the overlay
+        const first = t.split(/[\n]/)[0].trim();
+        if (first.length >= 20 && first.length <= 120) lines.push(first);
       });
-      // Deduplicate and cap
       return [...new Set(lines)].slice(0, 30);
     }
 
@@ -738,23 +853,51 @@
       return scenes;
     }
 
-    // Fallback lines if no data scraped yet
+    // Real overlay text from competitor images (OCR-extracted from top performers)
     const FALLBACK_OVERLAY_LINES = [
-      'The only BS I need is "Beach" and "Sunshine"',
-      'My out-of-office reply is a palm tree emoji',
-      'I don\'t need therapy, I need a beach vacation',
-      'This is how every morning should start... Beach, sunrise, and coffee',
-      'My retirement plan is just a beach and a good book',
-      'You can\'t be stressed with your toes in the sand',
-      'Waking up is easier when you\'re surrounded by sand and sea',
-      'The beach is where my worries go to drown',
-      'I\'m not lazy, I\'m on beach mode',
-      'Correct me if I\'m wrong, but the beach fixes everything',
-      'My happy place has palm trees and no WiFi',
-      'This view. This feeling. This life.',
-      'Somewhere between the ocean and the sky, I found peace',
-      'Paradise isn\'t a place, it\'s a feeling',
+      'Nothing beats ocean sunsets',
+      'Summer, please return at your earliest convenience',
+      'I don\'t need a penthouse... this view would be just fine',
       'One minute you\'re young and busy... the next you just want a quiet day at the beach',
+      'Correct me if I\'m wrong but the beach is where you feel most at ease',
+      'I\'m ready to live in the part of the year that feels like summer',
+      'I could live at the beach for the rest of my life',
+      'All I need is a good dose of vitamin sea',
+      'Nothing soothes the soul like a walk on the beach',
+      'The beach makes me forget all my worries',
+      'I would rather have a small quiet cottage on the beach than a house in the city',
+      'When the sky glows, I stop and admire the view',
+      'The beach doesn\'t add days to your life, it adds life to your days',
+      'My heart aches for those barefoot, sun-kissed and completely free days',
+      'Hearing the sound of the waves makes me instantly relaxed',
+      'Let\'s go where it\'s just sand, sea, and serenity',
+      'If travel cost nothing, I\'d spend my life discovering every beach',
+      'Something about being by the ocean just resets me',
+      'I think a beach weekend would fix a lot right now',
+      'The ocean keeps me entertained without saying a word',
+      'Wherever life leads you, remember to leave room for sunsets and ocean views',
+      'The moment my feet hit the sand, my mood shifts instantly',
+      'Sometimes, you just need a beach day. Or two.',
+      'Currently pretending I\'m at the beach',
+      'The only BS I need in my life is Beach and Sunshine',
+      'If my heart could choose, it would live by the ocean forever',
+      'I just need a quiet corner at the beach with no news, no stress',
+      'Some people move for jobs... I\'d move for beach weather',
+      'The beach gets quiet when the sun goes down... that\'s my favorite time',
+      'When everything feels overwhelming, the beach makes it quiet again',
+      'A full day at the beach is my favorite way to be exhausted',
+      'The beach and I met at the perfect age',
+      'Not sure if I\'m correct... but I could happily spend the rest of my life at the beach',
+      'Correct me if I\'m wrong... but nothing hits like a quiet beach morning with good coffee',
+      'I can\'t wait to walk on a warm sandy beach with my bare feet',
+      'Not sure if I\'m well... but I get excited over things like ocean waves',
+      'I\'d rather book a short trip every couple of months than go out every weekend',
+      'Correct me if I\'m wrong but even a short time at the beach can change your mood',
+      'Correct me if I\'m wrong but ocean air improves your mood fast',
+      'Let\'s just go and not come back for a while',
+      'Dear beach, it\'s been too long. Can\'t wait to be back',
+      'Funny how the right path usually ends with sand and waves',
+      'Travel looks good on you. Keep going.',
     ];
 
     const FALLBACK_CAPTIONS = {
@@ -797,22 +940,88 @@
       return pick;
     }
 
-    function generateCaption() {
+    // Generate a FB caption that MATCHES the overlay quote's tone/topic
+    // The best performer pattern: overlay = the quote, caption = short reaction + emojis
+    function generateCaption(overlayQuote) {
       const bs = loadBrandSettings();
-      const style = bs.ctaStyle || 'mixed';
-      const dataPool = extractCaptionPool();
-      // Merge data-driven + fallback
-      const merged = {
-        question: [...(dataPool.question || []), ...FALLBACK_CAPTIONS.question],
-        tag: [...(dataPool.tag || []), ...FALLBACK_CAPTIONS.tag],
-        mood: [...(dataPool.mood || []), ...FALLBACK_CAPTIONS.mood],
-      };
-      const pool = style === 'mixed'
-        ? [...merged.question, ...merged.tag, ...merged.mood]
-        : (merged[style] || merged.question);
-      let caption = pickUnique(pool, _usedCaptions);
-      // Trim to short FB caption style (max ~100 chars before hashtags)
-      if (caption.length > 120) caption = caption.slice(0, 100).replace(/\s+\S*$/, '') + '...';
+      const q = (overlayQuote || '').toLowerCase();
+
+      // Strategy: create a short reaction to the overlay quote (like the competitors do)
+      // VacationPro style: "Who else agrees?? 🌅🌴" or "This is the only BS I can handle 🤣☀️"
+      let caption = '';
+
+      // Match caption tone to overlay content
+      if (/agree|disagree|wrong|right|true|correct/i.test(q)) {
+        caption = pickRandom([
+          'Who else agrees?? 🌅🌴',
+          'Tell me I\'m not the only one 🤣☀️',
+          'Agree or disagree?? 🌊',
+          'Facts or nah?? 🤔🌴',
+          'This one hits different 💯🌊',
+        ]);
+      } else if (/coffee|morning|sunrise|wake/i.test(q)) {
+        caption = pickRandom([
+          'Exactly how I want my mornings to look ☕️🌅',
+          'Morning goals right here ☀️☕️',
+          'Is this too much to ask for? 😍🌅',
+          'Every single morning please ☕️🌊',
+        ]);
+      } else if (/retirement|old|book|read/i.test(q)) {
+        caption = pickRandom([
+          'The dream right here 🌴✨',
+          'Who else has this retirement plan? 😂🏖️',
+          'Living the dream 📖🌊',
+          'Goals 🙌☀️',
+        ]);
+      } else if (/cocktail|drink|happy hour|bs|sunshine/i.test(q)) {
+        caption = pickRandom([
+          'The only vibe I need 🍹☀️',
+          'This is the only BS I can handle 🤣☀️',
+          'Cheers to that 🍹🌊',
+          'MOOD 🏖️🍹',
+        ]);
+      } else if (/couple|love|romantic|together|hand/i.test(q)) {
+        caption = pickRandom([
+          'Tag your person 🥰🌅',
+          'Relationship goals 💕🌊',
+          'Send this to your travel partner 😍✈️',
+          'This is all we need 🤍🏖️',
+        ]);
+      } else if (/stress|therapy|need|escape|worry/i.test(q)) {
+        caption = pickRandom([
+          'Who needs this right now? 🏝️',
+          'Prescribing this for everyone 🤣🌊',
+          'Tag someone who needs to see this 🌅',
+          'The only therapy I need 💙🌊',
+        ]);
+      } else if (/lazy|relax|hammock|chill|no plan|peace/i.test(q)) {
+        caption = pickRandom([
+          'Mood forever 🏖️💙',
+          'This is all I need in life 🤣🌅',
+          'Take me here immediately 🏝️',
+          'Zero plans, zero worries 🌊✨',
+        ]);
+      } else if (/toes|sand|feet|beach/i.test(q)) {
+        caption = pickRandom([
+          'Who else agrees?? 🌅🌴',
+          'The best feeling in the world 🏖️',
+          'This is where I belong 🌊☀️',
+          'Beach therapy hits different 🤍🏝️',
+        ]);
+      } else {
+        // Generic mood/reaction captions
+        caption = pickRandom([
+          'Who else agrees?? 🌅🌴',
+          'This is the only vibe I need 🌊☀️',
+          'Take me here immediately 🏝️',
+          'The dream right here 🌴✨',
+          'Anyone else feel this way?? 🌴',
+          'Mood forever 🏖️💙',
+          'Is this too much to ask for? 😍✈️',
+          'This is all I need in life 🤣🌅',
+        ]);
+      }
+
       if (bs.hashtags) caption += '\n\n' + bs.hashtags;
       return caption;
     }
@@ -822,59 +1031,139 @@
     const overlayLines = [];
 
     // --- Build a photo scene that MATCHES the overlay quote ---
+    // Visual elements from FB alt text analysis of top performers (10k+ eng):
+    // - "beach, ocean" "beach, ocean, horizon" "ocean, water, beach" — scenic, NO close-up faces
+    // - Variety of angles, lighting, and props makes each unique
+    // - Some lifestyle props (feet in sand, coffee, hammock) but from behind/far away
+
+    const SCENE_ANGLES = [
+      'wide landscape shot from the shoreline looking out to sea',
+      'aerial drone shot looking straight down at the coastline where waves meet sand',
+      'low angle shot from the sand looking up at palm trees and bright blue sky',
+      'panoramic view from a clifftop overlooking turquoise ocean below',
+      'close-up of crystal clear waves washing over white sand',
+      'shot from waist-deep in turquoise water looking back at a tropical beach',
+      'view through palm fronds framing the ocean and horizon',
+      'silhouette shot against a colorful sunset sky over the ocean',
+      'long shot down a pristine empty beach stretching into the distance',
+      'reflection shot with wet sand perfectly mirroring the sky and clouds',
+      'shot from the end of a wooden pier or dock looking out to sea',
+      'wide angle from a beach boardwalk with ocean on both sides',
+    ];
+
+    const SCENE_LIGHTING = [
+      'golden hour warm light with long soft shadows',
+      'bright midday tropical sunshine, vibrant saturated colors, clear sky',
+      'dramatic sunset with orange pink and purple sky reflecting on the water',
+      'soft morning light just after sunrise, gentle warm tones, misty',
+      'overcast dramatic sky with one ray of sunlight breaking through clouds onto the water',
+      'backlit with sun flare creating a dreamy warm glow',
+    ];
+
+    const SCENE_ELEMENTS = [
+      'turquoise ocean water meeting white sand beach, gentle foamy waves rolling in',
+      'dramatic waves crashing on smooth rocks with sea spray catching the light',
+      'calm crystal clear lagoon where you can see the sandy bottom and fish swimming',
+      'palm trees leaning over the water, tropical paradise, lush green fronds',
+      'pristine untouched beach stretching far into the distance, total solitude',
+      'tide pools with crystal clear water reflecting the sky on a rocky shoreline',
+      'shallow turquoise water over a white sand bar with deeper blue ocean beyond',
+      'wild coastal dunes with sea grass waving in the wind, natural beach beauty',
+    ];
+
+    // Props that top performers include (keeps images varied without using faces)
+    const SCENE_PROPS = [
+      '', '', '', '', // most top posts have NO props — just the scene
+      'a pair of flip flops casually left on the sand near the water',
+      'a single beach chair and striped umbrella at the water\'s edge',
+      'a vintage surfboard stuck upright in the sand',
+      'two colorful beach towels spread on the sand with a straw hat',
+      'a hammock gently swaying between two palm trees',
+      'a mug of coffee sitting on a weathered wooden railing overlooking the ocean',
+      'footprints leading along the wet sand into the distance',
+      'a person seen from very far away, tiny silhouette walking along the shoreline',
+      'a woman from behind, standing at the water\'s edge looking out at the ocean, hair blowing',
+      'a couple from far away holding hands, small figures against the vast ocean',
+      'bare feet buried in warm white sand, close-up, ocean in background',
+    ];
+
+    let _usedAngles = new Set();
+    let _usedLighting = new Set();
+    let _usedElements = new Set();
+
     function buildSceneFromQuote(quote) {
       const q = quote.toLowerCase();
-      // Map quote keywords to matching photo scenes
-      const mappings = [
-        { keywords: ['retirement', 'book', 'read'], scene: 'person relaxing on a gorgeous tropical white sand beach reading a book in a beach chair, bright sunshine, turquoise ocean, peaceful retirement vibes' },
-        { keywords: ['coffee', 'morning', 'sunrise', 'wake'], scene: 'cup of coffee on a balcony railing overlooking a tropical beach at golden sunrise, warm morning light, palm trees, ocean view, cozy morning vibes' },
-        { keywords: ['bs', 'beach', 'sunshine', 'sunny'], scene: 'bright sunny day at a stunning tropical beach, turquoise water, white sand, palm trees swaying, vibrant blue sky, pure paradise' },
-        { keywords: ['therapy', 'need', 'vacation', 'getaway'], scene: 'stunning secluded tropical beach with crystal clear water, white sand, no crowds, peaceful escape from reality, hammock between palm trees' },
-        { keywords: ['out-of-office', 'office', 'work', 'email', 'palm tree emoji'], scene: 'laptop closed on a beach towel next to flip flops, turquoise ocean in background, vacation mode, out of office vibes' },
-        { keywords: ['toes', 'sand', 'feet', 'stress'], scene: 'close up of bare feet buried in warm white sand, turquoise ocean waves gently lapping nearby, total relaxation, beach therapy' },
-        { keywords: ['sunset', 'evening', 'golden', 'sky'], scene: 'breathtaking tropical sunset over the ocean, dramatic orange pink and purple sky, silhouette of palm trees, golden hour magic' },
-        { keywords: ['cocktail', 'drink', 'cheers', 'happy hour', 'margarita'], scene: 'two colorful tropical cocktails with fruit garnish on a beachside bar, turquoise ocean in background, vacation happy hour' },
-        { keywords: ['couple', 'together', 'love', 'romantic', 'hand'], scene: 'couple walking hand in hand along a tropical beach at sunset, footprints in sand, romantic golden light, love story' },
-        { keywords: ['hammock', 'lazy', 'relax', 'chill', 'nap', 'no plan'], scene: 'person relaxing in a hammock strung between palm trees on a white sand beach, turquoise ocean, zero stress, pure bliss' },
-        { keywords: ['pool', 'float', 'swim', 'infinity'], scene: 'stunning infinity pool overlooking the Caribbean ocean at golden hour, lounge chairs, tropical plants, luxury resort vibes' },
-        { keywords: ['bucket list', 'dream', 'paradise', 'heaven'], scene: 'jaw-dropping aerial view of a turquoise lagoon with overwater bungalows, crystal clear water, Maldives-style paradise' },
-        { keywords: ['happy place', 'wifi', 'disconnect', 'peace'], scene: 'hidden beach cove surrounded by lush tropical jungle, no people, crystal clear water, total disconnection from the world' },
-        { keywords: ['view', 'feeling', 'life', 'moment', 'this'], scene: 'stunning panoramic ocean view from a clifftop terrace, endless turquoise water meeting blue sky, breathtaking moment' },
-        { keywords: ['wave', 'ocean', 'sea', 'water', 'blue'], scene: 'massive crystal clear turquoise wave curling with sunlight shining through it, powerful ocean beauty, coastal paradise' },
-        { keywords: ['island', 'tropical', 'palm', 'caribbean'], scene: 'small tropical island with lush palm trees surrounded by crystal clear turquoise water, aerial view, private island paradise' },
-        { keywords: ['food', 'breakfast', 'eat', 'buffet', 'dining'], scene: 'gorgeous tropical resort breakfast spread on an outdoor terrace overlooking the ocean, fresh fruit, pastries, mimosas, luxury dining' },
-        { keywords: ['boat', 'yacht', 'sail', 'cruise'], scene: 'luxury yacht anchored in a crystal clear turquoise bay, surrounded by green islands, dream vacation on the water' },
-        { keywords: ['fire', 'bonfire', 'night', 'star', 'evening'], scene: 'cozy beach bonfire at sunset with chairs around it, orange glow, waves crashing nearby, perfect evening on the beach' },
-        { keywords: ['flight', 'plane', 'travel', 'airport', 'ticket'], scene: 'airplane wing view over a stunning turquoise ocean with small tropical islands below, window seat paradise, travel dreams' },
+
+      // Keyword-specific extras that match the overlay quote's meaning to a photo scene
+      // Derived from OCR analysis of what images the competitors pair with each quote type
+      const contextMappings = [
+        { keywords: ['retirement', 'book', 'read'], extra: 'a person from behind sitting in a beach chair reading a book, relaxed' },
+        { keywords: ['coffee', 'morning'], extra: 'a cup of coffee on a small wooden table in the foreground, sunrise glow' },
+        { keywords: ['toes', 'feet', 'barefoot'], extra: 'close-up of bare feet half-buried in warm sand at the water\'s edge' },
+        { keywords: ['cocktail', 'drink', 'cheers', 'happy hour'], extra: 'two colorful tropical cocktails with fruit garnish on a beachside bar counter' },
+        { keywords: ['couple', 'together', 'love', 'romantic', 'hand'], extra: 'a couple as small silhouettes walking the shoreline at golden hour' },
+        { keywords: ['hammock', 'lazy', 'relax', 'nap', 'no plan'], extra: 'a hammock gently swaying between two palm trees, ocean behind it' },
+        { keywords: ['pool', 'float', 'swim', 'infinity', 'poolside'], extra: 'stunning infinity pool edge with turquoise ocean stretching to the horizon beyond' },
+        { keywords: ['boat', 'yacht', 'sail', 'cruise'], extra: 'a sailboat or yacht anchored in a crystal clear turquoise bay' },
+        { keywords: ['bonfire', 'night', 'star'], extra: 'a beach bonfire glowing warmly at dusk with ember sparks' },
+        { keywords: ['flight', 'plane', 'travel', 'airport', 'trip'], extra: 'view from an airplane window of tropical islands and ocean below' },
+        { keywords: ['out-of-office', 'office', 'work', 'email'], extra: 'a closed laptop next to flip flops on a beach towel, vacation mode' },
+        { keywords: ['food', 'breakfast', 'eat', 'buffet', 'dining'], extra: 'a tropical breakfast spread on an outdoor terrace with ocean view' },
+        // New mappings from OCR analysis of top performers
+        { keywords: ['sunset', 'sun goes down', 'sky glows', 'golden'], extra: '' }, // let lighting handle sunset
+        { keywords: ['cottage', 'penthouse', 'house', 'live', 'home'], extra: 'a small charming beach cottage with a porch overlooking the ocean' },
+        { keywords: ['walk', 'path', 'stroll', 'right path'], extra: 'a wooden boardwalk path leading through dunes toward the ocean' },
+        { keywords: ['quiet', 'peace', 'calm', 'overwhelming', 'resets', 'stress'], extra: 'an empty serene beach at dawn, no people, total stillness, mist on the water' },
+        { keywords: ['wave', 'sound', 'ocean air', 'vitamin sea'], extra: 'a beautiful turquoise wave mid-curl with sunlight shining through it' },
+        { keywords: ['pretending', 'countdown', 'freezing', 'can\'t wait', 'dear beach'], extra: 'a dreamy tropical beach seen through a frosty window, warm vs cold contrast' },
+        { keywords: ['summer', 'spring', 'season', 'year'], extra: 'a lush tropical beach with flowers blooming in the foreground' },
+        { keywords: ['discover', 'exploring', 'cost nothing', 'every beach'], extra: 'an aerial view of a pristine hidden beach surrounded by jungle cliffs' },
+        { keywords: ['exhausted', 'full day', 'favorite way'], extra: 'a beach towel and sunscreen on the sand with golden late-afternoon light' },
       ];
 
-      // Find best matching scene
-      let bestMatch = null;
+      // Find contextual extra element
+      let contextExtra = '';
       let bestScore = 0;
-      for (const m of mappings) {
+      for (const m of contextMappings) {
         const score = m.keywords.filter(kw => q.includes(kw)).length;
-        if (score > bestScore) { bestScore = score; bestMatch = m.scene; }
+        if (score > bestScore) { bestScore = score; contextExtra = m.extra; }
       }
 
-      // Fallback: generic beautiful beach
-      if (!bestMatch) {
-        const fallbackScenes = [
-          'stunning tropical beach with turquoise water and white sand, palm trees, bright sunny day',
-          'beautiful ocean view at golden hour, waves gently crashing, warm peaceful light',
-          'crystal clear turquoise lagoon surrounded by lush tropical vegetation, serene paradise',
-          'aerial view of a stunning coastline with white sand and turquoise water, breathtaking',
-        ];
-        bestMatch = pickRandom(fallbackScenes);
+      // Build unique scene by combining randomized elements (no two are alike)
+      const angle = pickUnique(SCENE_ANGLES, _usedAngles);
+      const elements = pickUnique(SCENE_ELEMENTS, _usedElements);
+      const prop = pickRandom(SCENE_PROPS);
+
+      // Force sunset lighting for sunset-themed quotes
+      let lighting;
+      if (/sunset|sun goes down|sky glows|golden hour|dusk|evening/i.test(q)) {
+        lighting = 'dramatic sunset with orange pink and purple sky reflecting on the water';
+      } else if (/morning|sunrise|wake|dawn/i.test(q)) {
+        lighting = 'soft morning light just after sunrise, gentle warm tones, misty';
+      } else if (/night|star|bonfire/i.test(q)) {
+        lighting = 'blue hour twilight with first stars appearing, warm ambient glow';
+      } else {
+        lighting = pickUnique(SCENE_LIGHTING, _usedLighting);
       }
 
-      return bestMatch;
+      let scene = `${angle}, ${elements}, ${lighting}`;
+      if (contextExtra) {
+        scene += `, ${contextExtra}`;
+      } else if (prop) {
+        scene += `, ${prop}`;
+      }
+
+      return scene;
     }
 
     function buildPhotoPrompt(scene) {
       const bs = loadBrandSettings();
-      let prompt = `A stunning, high-quality photograph of ${scene}. `;
-      prompt += `Photorealistic, professional travel photography, vibrant natural colors, beautiful lighting. `;
-      prompt += `No text, no words, no letters, no watermarks, no logos anywhere in the image. Square 1:1 format.`;
+      let prompt = `A breathtaking, professional photograph: ${scene}. `;
+      prompt += `Shot with a high-end DSLR camera. Photorealistic, NOT AI-looking. `;
+      prompt += `Rich vibrant natural colors, stunning composition, emotional and aspirational. `;
+      prompt += `The kind of photo that would make someone stop scrolling on Facebook and dream about being there. `;
+      prompt += `Absolutely NO text, NO words, NO letters, NO watermarks, NO logos, NO overlays anywhere in the image. `;
+      prompt += `Clean photograph only. Square 1:1 aspect ratio.`;
       if (bs.customInstructions) prompt += ` ${bs.customInstructions}`;
       return prompt;
     }
@@ -882,14 +1171,14 @@
     // --- Canvas Text Overlay (pixel-perfect, reads style from UI controls) ---
     function getOverlaySettings() {
       return {
-        fontSize: parseInt(document.getElementById('overlayFontSize')?.value) || 52,
+        fontSize: parseInt(document.getElementById('overlayFontSize')?.value) || 58,
         position: document.getElementById('overlayPosition')?.value || 'center',
-        darkness: parseFloat(document.getElementById('overlayDarkness')?.value ?? 0.5),
+        darkness: parseFloat(document.getElementById('overlayDarkness')?.value ?? 0.6),
         textColor: document.getElementById('overlayTextColor')?.value || '#ffffff',
-        fontWeight: document.getElementById('overlayFontWeight')?.value || '700',
-        shadow: parseInt(document.getElementById('overlayShadow')?.value ?? 12),
-        watermarkSize: parseInt(document.getElementById('overlayWatermarkSize')?.value ?? 18),
-        letterSpacing: parseInt(document.getElementById('overlayLetterSpacing')?.value ?? 0),
+        fontWeight: document.getElementById('overlayFontWeight')?.value || '800',
+        shadow: parseInt(document.getElementById('overlayShadow')?.value ?? 16),
+        watermarkSize: parseInt(document.getElementById('overlayWatermarkSize')?.value ?? 20),
+        letterSpacing: parseInt(document.getElementById('overlayLetterSpacing')?.value ?? 1),
       };
     }
 
@@ -906,33 +1195,50 @@
           // Draw photo
           ctx.drawImage(img, 0, 0, S, S);
 
-          // --- Dark gradient overlay for text readability ---
+          // --- Full-image dark overlay (like competitors) ---
+          // Competitors use a uniform semi-transparent dark wash across the whole image
+          // This makes text readable without ugly gradient bands
           if (os.darkness > 0) {
-            let gradTop, gradBot;
-            if (os.position === 'upper') { gradTop = 0; gradBot = S * 0.55; }
-            else if (os.position === 'lower') { gradTop = S * 0.45; gradBot = S; }
-            else { gradTop = S * 0.15; gradBot = S * 0.85; }
+            // Full image base tint
+            ctx.fillStyle = `rgba(0,0,0,${os.darkness * 0.35})`;
+            ctx.fillRect(0, 0, S, S);
 
-            const grad = ctx.createLinearGradient(0, gradTop, 0, gradBot);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(0.2, `rgba(0,0,0,${os.darkness * 0.5})`);
-            grad.addColorStop(0.5, `rgba(0,0,0,${os.darkness})`);
-            grad.addColorStop(0.8, `rgba(0,0,0,${os.darkness * 0.5})`);
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, gradTop, S, gradBot - gradTop);
+            // Stronger vignette at edges for depth
+            const vigGrad = ctx.createRadialGradient(S/2, S/2, S*0.25, S/2, S/2, S*0.75);
+            vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            vigGrad.addColorStop(1, `rgba(0,0,0,${os.darkness * 0.4})`);
+            ctx.fillStyle = vigGrad;
+            ctx.fillRect(0, 0, S, S);
+
+            // Extra darkening behind text area (center band)
+            let bandTop, bandBot;
+            if (os.position === 'upper') { bandTop = S * 0.05; bandBot = S * 0.55; }
+            else if (os.position === 'lower') { bandTop = S * 0.45; bandBot = S * 0.95; }
+            else { bandTop = S * 0.18; bandBot = S * 0.82; }
+
+            const bandGrad = ctx.createLinearGradient(0, bandTop, 0, bandBot);
+            bandGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            bandGrad.addColorStop(0.15, `rgba(0,0,0,${os.darkness * 0.25})`);
+            bandGrad.addColorStop(0.5, `rgba(0,0,0,${os.darkness * 0.35})`);
+            bandGrad.addColorStop(0.85, `rgba(0,0,0,${os.darkness * 0.25})`);
+            bandGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = bandGrad;
+            ctx.fillRect(0, bandTop, S, bandBot - bandTop);
           }
 
-          // --- Quote text ---
+          // --- Quote text (competitor style: big, bold, fills the space) ---
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
 
-          let fontSize = os.fontSize;
-          const maxWidth = S * 0.82;
-          const fontStr = () => `${os.fontWeight} ${fontSize}px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
+          // Start with larger font — competitors use BIG text that fills the image
+          let fontSize = Math.max(os.fontSize, 56);
+          const maxWidth = S * 0.80;
+          const fontFamily = "'Impact', 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
+          // Use the user's weight but default to 800 for impact
+          const weight = os.fontWeight === '400' ? '400' : '800';
+          const fontStr = () => `${weight} ${fontSize}px ${fontFamily}`;
           ctx.font = fontStr();
 
-          // Letter spacing via character-by-character drawing
           const spacing = os.letterSpacing;
 
           function wrapText(text, maxW) {
@@ -953,65 +1259,97 @@
             return lines;
           }
 
+          // Auto-size: scale up to fill space, then down if too many lines
           let lines = wrapText(quote, maxWidth);
-          while (lines.length > 5 && fontSize > 28) {
+          // If text is short, go bigger
+          if (lines.length <= 2 && fontSize < 72) {
+            fontSize = 72;
+            ctx.font = fontStr();
+            lines = wrapText(quote, maxWidth);
+          }
+          if (lines.length <= 1 && fontSize < 88) {
+            fontSize = 88;
+            ctx.font = fontStr();
+            lines = wrapText(quote, maxWidth);
+          }
+          // If too many lines, scale down
+          while (lines.length > 6 && fontSize > 32) {
             fontSize -= 4;
             ctx.font = fontStr();
             lines = wrapText(quote, maxWidth);
           }
 
-          const lineHeight = fontSize * 1.3;
+          const lineHeight = fontSize * 1.22;
           const totalHeight = lines.length * lineHeight;
 
           // Position
           let centerY;
-          if (os.position === 'upper') centerY = S * 0.28;
-          else if (os.position === 'lower') centerY = S * 0.72;
-          else centerY = S / 2;
+          if (os.position === 'upper') centerY = S * 0.30;
+          else if (os.position === 'lower') centerY = S * 0.68;
+          else centerY = S * 0.48; // slightly above center like competitors
 
           const startY = centerY - (totalHeight / 2) + (lineHeight / 2);
 
-          // Text shadow
-          if (os.shadow > 0) {
-            ctx.shadowColor = 'rgba(0,0,0,0.7)';
-            ctx.shadowBlur = os.shadow;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = Math.max(2, os.shadow / 4);
-          }
-
-          // Draw each line
+          // --- Multi-layer text shadow for depth (competitor look) ---
           ctx.fillStyle = os.textColor;
           ctx.font = fontStr();
 
-          if (spacing > 0) {
-            // Draw with letter spacing
-            lines.forEach((line, i) => {
-              const y = startY + i * lineHeight;
-              const chars = line.split('');
-              const totalW = ctx.measureText(line).width + (chars.length - 1) * spacing;
-              let x = (S / 2) - (totalW / 2);
-              chars.forEach(ch => {
-                ctx.fillText(ch, x + ctx.measureText(ch).width / 2, y);
-                x += ctx.measureText(ch).width + spacing;
-              });
-            });
-          } else {
-            lines.forEach((line, i) => {
-              ctx.fillText(line, S / 2, startY + i * lineHeight);
-            });
-          }
-
-          // Reset shadow
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
+          // Layer 1: far shadow (soft glow)
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.shadowBlur = Math.max(20, os.shadow * 1.5);
           ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
+          ctx.shadowOffsetY = 3;
 
-          // --- Watermark at bottom ---
+          const drawLines = () => {
+            if (spacing > 0) {
+              lines.forEach((line, i) => {
+                const y = startY + i * lineHeight;
+                const chars = line.split('');
+                const totalW = ctx.measureText(line).width + (chars.length - 1) * spacing;
+                let x = (S / 2) - (totalW / 2);
+                chars.forEach(ch => {
+                  ctx.fillText(ch, x + ctx.measureText(ch).width / 2, y);
+                  x += ctx.measureText(ch).width + spacing;
+                });
+              });
+            } else {
+              lines.forEach((line, i) => {
+                ctx.fillText(line, S / 2, startY + i * lineHeight);
+              });
+            }
+          };
+
+          // Draw text 3 times for crisp shadow buildup (competitor trick)
+          drawLines();
+          ctx.shadowBlur = Math.max(8, os.shadow * 0.6);
+          ctx.shadowOffsetY = 2;
+          drawLines();
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.shadowColor = 'transparent';
+          drawLines(); // final crisp pass
+
+          // --- Watermark at bottom (brand name in caps, spaced out) ---
           if (watermark && os.watermarkSize > 0) {
-            ctx.font = `600 ${os.watermarkSize}px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
-            ctx.fillStyle = os.textColor === '#000000' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)';
-            ctx.fillText(watermark, S / 2, S - 28);
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 1;
+            const wmSize = Math.max(os.watermarkSize, 16);
+            ctx.font = `700 ${wmSize}px 'Helvetica Neue', Arial, sans-serif`;
+            ctx.fillStyle = os.textColor === '#000000' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.65)';
+            // Draw watermark in uppercase with letter spacing
+            const wmText = watermark.toUpperCase();
+            const wmSpacing = 3;
+            const wmChars = wmText.split('');
+            const wmTotalW = ctx.measureText(wmText).width + (wmChars.length - 1) * wmSpacing;
+            let wmX = (S / 2) - (wmTotalW / 2);
+            const wmY = S - 32;
+            wmChars.forEach(ch => {
+              ctx.fillText(ch, wmX + ctx.measureText(ch).width / 2, wmY);
+              wmX += ctx.measureText(ch).width + wmSpacing;
+            });
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
           }
 
           resolve(canvas.toDataURL('image/png'));
@@ -1044,36 +1382,81 @@
     }
 
     // === STATIC POSTS (data-driven) ===
+    const approvedPosts = new Set();
+
     function renderStaticCard(index, quote, caption, imgSrc) {
       const loaded = !!imgSrc;
+      const approved = approvedPosts.has(index);
       const safeTitle = `static-${index}`;
-      return `<div class="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white" id="imgCard${index}">
-        <div class="aspect-square bg-gray-100 flex items-center justify-center" id="imgContainer${index}">
-          ${loaded ? `<img src="${imgSrc}" class="w-full h-full object-cover" id="genImg${index}" crossorigin="anonymous">` : `<div class="text-center text-gray-400 p-6"><svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><p class="text-xs font-medium">"${quote}"</p><p class="text-xs mt-1 text-gray-300">Click Generate</p></div>`}
+      const borderClass = approved ? 'border-2 border-green-400 ring-2 ring-green-100' : 'border border-gray-200';
+      return `<div class="rounded-xl overflow-hidden ${borderClass} shadow-sm bg-white relative" id="imgCard${index}">
+        <div class="aspect-square bg-gray-100 flex items-center justify-center relative" id="imgContainer${index}">
+          ${loaded ? `<img src="${imgSrc}" class="w-full h-full object-cover" id="genImg${index}" crossorigin="anonymous">` : `<div class="text-center text-gray-400 p-6"><svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><p class="text-xs font-medium">"${quote}"</p><p class="text-xs mt-1 text-gray-300">Click Generate</p></div>`}
+          ${!approved ? `<div class="absolute top-2 right-2 z-10 flex gap-1.5">
+            <button onclick="approvePost(${index})" class="bg-green-500 hover:bg-green-600 text-white font-bold w-9 h-9 rounded-full shadow-lg transition flex items-center justify-center" title="Approve this post"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></button>
+            <button onclick="retryPost(${index})" class="bg-red-500 hover:bg-red-600 text-white font-bold w-9 h-9 rounded-full shadow-lg transition flex items-center justify-center" title="New overlay + image"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></button>
+          </div>` : ''}
+          ${approved ? '<div class="absolute top-2 left-2 z-10 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>Approved</div>' : ''}
         </div>
         <div class="p-3">
-          <div class="flex items-center justify-between mb-1">
-            <h4 class="font-semibold text-sm">Static #${index + 1}</h4>
-            <div class="flex items-center gap-1">
-              <button onclick="downloadImage(${index}, '${safeTitle}')" class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium px-2 py-1 rounded-lg transition" id="dlBtn${index}" ${loaded ? '' : 'disabled'}>PNG</button>
-              <button onclick="openScheduleModal(${index}, 'static')" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium px-2 py-1 rounded-lg transition" id="schedBtn${index}" ${loaded ? '' : 'disabled'}>Schedule</button>
-            </div>
-          </div>
           <p class="text-xs text-gray-400 mb-1">On image: "<em>${quote}</em>"</p>
           <p class="text-xs text-gray-400 mb-1">Facebook caption:</p>
-          <textarea id="caption${index}" rows="2" class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none">${caption}</textarea>
+          <textarea id="caption${index}" rows="2" class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none mb-2">${caption}</textarea>
+          <div class="flex gap-2">
+            <button onclick="downloadImage(${index}, '${safeTitle}')" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 rounded-lg transition flex items-center justify-center gap-1.5" id="dlBtn${index}" ${loaded ? '' : 'disabled'}>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Download PNG
+            </button>
+            <button onclick="openScheduleModal(${index}, 'static')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-lg transition flex items-center justify-center gap-1.5" id="schedBtn${index}" ${loaded ? '' : 'disabled'}>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Schedule
+            </button>
+          </div>
         </div>
       </div>`;
+    }
+
+    function approvePost(index) {
+      approvedPosts.add(index);
+      const card = document.getElementById(`imgCard${index}`);
+      if (card) card.outerHTML = renderStaticCard(index, overlayLines[index], generatedCaptions[index], generatedImageData[index]);
+    }
+
+    async function retryPost(index) {
+      const container = document.getElementById(`imgContainer${index}`);
+      if (container) container.innerHTML = '<div class="flex flex-col items-center justify-center h-full"><svg class="w-8 h-8 animate-spin text-purple-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg><p class="text-xs text-gray-400 mt-2">Generating new version...</p></div>';
+
+      // Pick new overlay that isn't used by other cards
+      const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
+      const inUse = new Set(overlayLines.filter((_, i) => i !== index));
+      const available = overlayPool.filter(q => !inUse.has(q));
+      const newQuote = available.length > 0 ? pickRandom(available) : pickRandom(overlayPool);
+
+      overlayLines[index] = newQuote;
+      generatedCaptions[index] = generateCaption(newQuote);
+
+      // Reset scene dedup for this retry so it gets a fresh scene
+      _usedAngles.clear(); _usedLighting.clear(); _usedElements.clear();
+
+      try {
+        const dataUri = await generateStaticImage(newQuote);
+        generatedImageData[index] = dataUri;
+        const card = document.getElementById(`imgCard${index}`);
+        if (card) card.outerHTML = renderStaticCard(index, newQuote, generatedCaptions[index], dataUri);
+      } catch (e) {
+        if (container) container.innerHTML = `<p class="text-sm text-red-400 text-center px-4">${e.message}<br><button onclick="retryPost(${index})" class="mt-2 text-xs bg-red-100 hover:bg-red-200 text-red-700 font-medium px-3 py-1 rounded-lg">Try Again</button></p>`;
+      }
     }
 
     function renderStaticPlaceholders() {
       const count = getCount('countStatic');
       const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
       _usedOverlays.clear(); _usedCaptions.clear(); _usedScenes.clear();
+      _usedAngles.clear(); _usedLighting.clear(); _usedElements.clear();
       overlayLines.length = 0; generatedCaptions.length = 0;
       for (let i = 0; i < count; i++) {
         overlayLines[i] = pickUnique(overlayPool, _usedOverlays);
-        generatedCaptions[i] = generateCaption();
+        generatedCaptions[i] = generateCaption(overlayLines[i]);
       }
       document.getElementById('tabContentStatic').innerHTML =
         Array.from({ length: count }, (_, i) => renderStaticCard(i, overlayLines[i], generatedCaptions[i], null)).join('');
@@ -1091,7 +1474,7 @@
 
       for (let i = 0; i < count; i++) {
         overlayLines[i] = pickUnique(overlayPool, _usedOverlays);
-        generatedCaptions[i] = generateCaption();
+        generatedCaptions[i] = generateCaption(overlayLines[i]);
       }
 
       document.getElementById('tabContentStatic').innerHTML =
@@ -1106,10 +1489,9 @@
           // Quote drives the scene — photo matches the overlay text
           const dataUri = await generateStaticImage(overlayLines[i]);
           generatedImageData[i] = dataUri;
-          const c = document.getElementById(`imgContainer${i}`);
-          if (c) c.innerHTML = `<img src="${dataUri}" class="w-full h-full object-cover" id="genImg${i}">`;
-          const dl = document.getElementById(`dlBtn${i}`); if (dl) dl.disabled = false;
-          const sc = document.getElementById(`schedBtn${i}`); if (sc) sc.disabled = false;
+          // Re-render full card so approve/deny buttons stay on the image
+          const card = document.getElementById(`imgCard${i}`);
+          if (card) card.outerHTML = renderStaticCard(i, overlayLines[i], generatedCaptions[i], dataUri);
           completed++;
         } catch (e) {
           const c = document.getElementById(`imgContainer${i}`);
@@ -1139,15 +1521,79 @@
       const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
       _generatedReels = [];
 
+      // Hot takes for "agree or disagree" reels — debate-worthy opinions, NOT random quotes
+      const hotTakes = [
+        'All-inclusive resorts are better than Airbnbs',
+        'Beach vacations > city vacations every single time',
+        'You should take at least 3 vacations a year',
+        'Solo travel is the best type of travel',
+        'The best vacations are the ones you don\'t plan',
+        'You don\'t need a passport to have the best vacation ever',
+        'Cruises are overrated',
+        'A weekend at the beach beats a week in the mountains',
+        'The cheapest vacation spots are actually the best ones',
+        'You\'re not really on vacation if you\'re checking email',
+      ];
+
+      // Destinations for "Top 3" and "Tag" reels
+      const destinations = [
+        'Cancun', 'Maldives', 'Bali', 'Turks & Caicos', 'Bahamas', 'Maui',
+        'Santorini', 'Punta Cana', 'Tulum', 'Bora Bora', 'Costa Rica', 'Jamaica',
+      ];
+
+      let _usedHotTakes = new Set();
+      let _usedDests = new Set();
+
       for (let i = 0; i < count; i++) {
         const base = hooks[i % hooks.length];
-        const hotTake = pickUnique(overlayPool, _usedOverlays);
-        // Personalize hook with actual content
         let hook = base.hook;
-        if (hook.includes('[') || hook.includes('Agree or disagree')) {
-          hook = hook.replace(/\[.*?\]/, hotTake).replace('Agree or disagree?', `Agree or disagree? ${hotTake}`);
+        let caption = '';
+
+        // Match content to the hook type
+        if (hook.includes('Agree or disagree')) {
+          const take = pickUnique(hotTakes, _usedHotTakes);
+          hook = `Agree or disagree? ${take}`;
+          caption = pickRandom([
+            `Agree or disagree?? 🤔🌴 #travel #vacation`,
+            `This is a HOT take 🔥 What do you think?`,
+            `Tell me I\'m wrong 🤣✈️`,
+          ]);
+        } else if (hook.includes('Tag') || hook.includes('tag')) {
+          const dest = pickUnique(shuffle(destinations), _usedDests);
+          hook = hook.replace('here', `to ${dest}`);
+          caption = pickRandom([
+            `Tag who you\'re taking 🏝️✈️`,
+            `Send this to your travel partner 🍹☀️`,
+            `Tag a friend who NEEDS this trip 😍`,
+          ]);
+        } else if (hook.includes('Top 3')) {
+          const picks = shuffle(destinations).slice(0, 3);
+          hook = `Top 3 places you NEED to visit: ${picks.join(', ')}`;
+          caption = pickRandom([
+            `Which one are you choosing? 👇🌊`,
+            `All 3. Final answer. 🏝️✈️🌴`,
+            `Comment your pick below 👇`,
+          ]);
+        } else if (hook.includes('POV')) {
+          const dest = pickUnique(shuffle(destinations), _usedDests);
+          hook = `POV: You just landed in ${dest} 🌴`;
+          caption = pickRandom([
+            `Take me back 😍✈️`,
+            `Living the dream 🌊☀️`,
+            `This is the only POV I need 🏖️`,
+          ]);
+        } else {
+          caption = pickRandom([
+            'Who else feels this? 🌅🌴',
+            'Tag someone who gets it 🤣🏖️',
+            'This is the vibe 🌊✨',
+          ]);
         }
-        _generatedReels.push({ ...base, hook, hotTake, caption: generateCaption() });
+
+        const bs = loadBrandSettings();
+        if (bs.hashtags) caption += '\n\n' + bs.hashtags;
+
+        _generatedReels.push({ ...base, hook, caption });
       }
 
       container.innerHTML = _generatedReels.map((reel, i) => `<div class="card-light rounded-xl p-5 shadow-sm border border-gray-200">
@@ -1340,5 +1786,16 @@
       } catch (e) { showScheduleStatus(`Failed: ${e.message}`, 'error'); submitBtn.disabled = false; submitBtn.textContent = 'Retry'; }
     }
   </script>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-gray-200 py-6 px-4 text-center text-xs text-gray-400">
+    <div class="flex flex-wrap justify-center gap-4 mb-2">
+      <a href="/privacy.html" class="hover:text-gray-600 transition">Privacy Policy</a>
+      <a href="/terms.html" class="hover:text-gray-600 transition">Terms of Service</a>
+      <a href="/cookies.html" class="hover:text-gray-600 transition">Cookie Policy</a>
+      <a href="mailto:support@pagegrowthpro.com" class="hover:text-gray-600 transition">Contact</a>
+    </div>
+    <p>&copy; 2026 PageGrowthPro. All rights reserved.</p>
+  </footer>
 </body>
 </html>

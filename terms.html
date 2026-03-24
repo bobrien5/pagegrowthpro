@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — PageGrowthPro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#7C3AED',
+            'primary-dark': '#6D28D9',
+            'primary-light': '#8B5CF6',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+  <!-- Nav -->
+  <nav class="bg-gray-900 text-white sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a href="landing.html" class="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">PageGrowthPro</a>
+        <div class="hidden md:flex items-center gap-6">
+          <a href="landing.html#features" class="text-sm text-gray-300 hover:text-white transition">Features</a>
+          <a href="landing.html#pricing" class="text-sm text-gray-300 hover:text-white transition">Pricing</a>
+          <a href="login.html" class="text-sm text-gray-300 hover:text-white transition">Login</a>
+          <a href="login.html" class="bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Get Started</a>
+        </div>
+        <button id="mobile-menu-btn-terms" class="md:hidden text-gray-300 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+      <div id="mobile-menu-terms" class="hidden md:hidden pb-4">
+        <a href="landing.html#features" class="block py-2 text-sm text-gray-300 hover:text-white">Features</a>
+        <a href="landing.html#pricing" class="block py-2 text-sm text-gray-300 hover:text-white">Pricing</a>
+        <a href="login.html" class="block py-2 text-sm text-gray-300 hover:text-white">Login</a>
+        <a href="login.html" class="mt-2 inline-block bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+    <div class="mb-6">
+      <a href="landing.html" class="text-primary hover:text-primary-dark text-sm font-medium transition">&larr; Back to Home</a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 sm:p-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Terms of Service</h1>
+      <p class="text-sm text-gray-500 mb-8">Last updated: March 24, 2026</p>
+
+      <!-- Table of Contents -->
+      <div class="bg-gray-50 rounded-xl p-6 mb-10 border border-gray-100">
+        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Table of Contents</h2>
+        <ol class="list-decimal list-inside space-y-1 text-sm text-primary">
+          <li><a href="#acceptance" class="hover:text-primary-dark transition">Acceptance of Terms</a></li>
+          <li><a href="#accounts" class="hover:text-primary-dark transition">Account Registration and Eligibility</a></li>
+          <li><a href="#subscription" class="hover:text-primary-dark transition">Subscription and Billing</a></li>
+          <li><a href="#refunds" class="hover:text-primary-dark transition">Refund Policy</a></li>
+          <li><a href="#acceptable-use" class="hover:text-primary-dark transition">Acceptable Use</a></li>
+          <li><a href="#ip" class="hover:text-primary-dark transition">Intellectual Property</a></li>
+          <li><a href="#third-party-services" class="hover:text-primary-dark transition">Third-Party Services</a></li>
+          <li><a href="#api-limits" class="hover:text-primary-dark transition">API Usage Limits</a></li>
+          <li><a href="#warranties" class="hover:text-primary-dark transition">Disclaimer of Warranties</a></li>
+          <li><a href="#liability" class="hover:text-primary-dark transition">Limitation of Liability</a></li>
+          <li><a href="#indemnification" class="hover:text-primary-dark transition">Indemnification</a></li>
+          <li><a href="#termination" class="hover:text-primary-dark transition">Termination</a></li>
+          <li><a href="#governing-law" class="hover:text-primary-dark transition">Governing Law</a></li>
+          <li><a href="#disputes" class="hover:text-primary-dark transition">Dispute Resolution</a></li>
+          <li><a href="#changes-terms" class="hover:text-primary-dark transition">Changes to These Terms</a></li>
+          <li><a href="#contact-terms" class="hover:text-primary-dark transition">Contact Us</a></li>
+        </ol>
+      </div>
+
+      <div class="space-y-10 text-gray-700 leading-relaxed">
+
+        <p>These Terms of Service ("Terms") govern your access to and use of the PageGrowthPro platform and services (the "Service") operated by PageGrowthPro ("we," "our," or "us"). By creating an account or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+
+        <!-- 1 -->
+        <section id="acceptance">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">1. Acceptance of Terms</h2>
+          <p>By accessing or using PageGrowthPro, you confirm that you have read, understood, and agree to be bound by these Terms and our <a href="privacy.html" class="text-primary hover:text-primary-dark underline">Privacy Policy</a>. These Terms constitute a legally binding agreement between you and PageGrowthPro.</p>
+        </section>
+
+        <!-- 2 -->
+        <section id="accounts">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">2. Account Registration and Eligibility</h2>
+          <ul class="list-disc list-inside space-y-2 ml-2">
+            <li>You must be at least 18 years of age to create an account and use the Service.</li>
+            <li>You must provide a valid email address and accurate information during registration.</li>
+            <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+            <li>You are responsible for all activity that occurs under your account.</li>
+            <li>You must notify us immediately of any unauthorized access to your account.</li>
+            <li>We reserve the right to refuse service, terminate accounts, or remove content at our sole discretion.</li>
+          </ul>
+        </section>
+
+        <!-- 3 -->
+        <section id="subscription">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">3. Subscription and Billing</h2>
+          <ul class="list-disc list-inside space-y-2 ml-2">
+            <li><strong>Paid plans:</strong> PageGrowthPro is a paid subscription service. Access to the platform requires an active paid subscription.</li>
+            <li><strong>Recurring billing:</strong> Subscriptions are billed on a recurring monthly basis. By subscribing, you authorize us to charge your payment method automatically each billing cycle.</li>
+            <li><strong>Price changes:</strong> We may change subscription prices with at least 30 days' notice. Price changes take effect at the start of your next billing cycle following the notice.</li>
+            <li><strong>Cancellation:</strong> You may cancel your subscription at any time. Upon cancellation, you will retain access to the Service until the end of your current billing period. No prorated refunds are issued for partial billing periods.</li>
+            <li><strong>Failed payments:</strong> If a payment fails, we may suspend access to your account until payment is resolved. We will attempt to notify you before suspension.</li>
+          </ul>
+        </section>
+
+        <!-- 4 -->
+        <section id="refunds">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">4. Refund Policy</h2>
+          <p class="mb-3">We offer a <strong>7-day money-back guarantee</strong> for new subscribers. If you are not satisfied with the Service within the first 7 days of your initial subscription, you may request a full refund by contacting us at <a href="mailto:support@pagegrowthpro.com" class="text-primary hover:text-primary-dark underline">support@pagegrowthpro.com</a>.</p>
+          <ul class="list-disc list-inside space-y-1 ml-2">
+            <li>The 7-day guarantee applies only to your first subscription period.</li>
+            <li>Refunds after the 7-day period are issued at our sole discretion.</li>
+            <li>Refunds are processed to the original payment method within 5-10 business days.</li>
+          </ul>
+        </section>
+
+        <!-- 5 -->
+        <section id="acceptable-use">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">5. Acceptable Use</h2>
+          <p class="mb-3">You agree not to use the Service to:</p>
+          <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
+            <li>Send spam, unsolicited messages, or bulk communications.</li>
+            <li>Scrape, harvest, or extract data from the Service beyond what is provided through the platform's intended features.</li>
+            <li>Resell, redistribute, or sublicense access to the Service or any data obtained through it.</li>
+            <li>Interfere with or disrupt the Service, servers, or networks connected to the Service.</li>
+            <li>Attempt to gain unauthorized access to any part of the Service or other accounts.</li>
+            <li>Use automated scripts, bots, or tools to access the Service (except as explicitly authorized).</li>
+            <li>Upload or transmit viruses, malware, or other harmful code.</li>
+            <li>Violate any applicable local, state, national, or international law or regulation.</li>
+            <li>Violate any third-party terms of service, including Facebook/Meta's terms.</li>
+            <li>Impersonate another person or entity.</li>
+          </ul>
+          <p>We reserve the right to investigate and take appropriate action against anyone who violates these provisions, including suspending or terminating their account.</p>
+        </section>
+
+        <!-- 6 -->
+        <section id="ip">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">6. Intellectual Property</h2>
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">6.1 Our Property</h3>
+          <p class="mb-4">The Service, including its design, code, features, algorithms, documentation, trademarks, and all related intellectual property, is owned by PageGrowthPro and protected by applicable intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the Service for its intended purpose during your active subscription.</p>
+
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">6.2 Your Content</h3>
+          <p class="mb-4">You retain ownership of any content you create, upload, or generate using the Service (including AI-generated content that you have customized or approved). You grant us a limited license to use your content solely to provide and improve the Service.</p>
+
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">6.3 Feedback</h3>
+          <p>Any feedback, suggestions, or ideas you provide about the Service may be used by us without obligation to you.</p>
+        </section>
+
+        <!-- 7 -->
+        <section id="third-party-services">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">7. Third-Party Services</h2>
+          <p class="mb-3">The Service integrates with third-party platforms and APIs, including:</p>
+          <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
+            <li><strong>Facebook/Meta:</strong> Your use of Facebook data through PageGrowthPro is subject to <a href="https://www.facebook.com/terms.php" class="text-primary hover:text-primary-dark underline" target="_blank" rel="noopener">Facebook's Terms of Service</a> and <a href="https://developers.facebook.com/terms/" class="text-primary hover:text-primary-dark underline" target="_blank" rel="noopener">Platform Terms</a>.</li>
+            <li><strong>Google Gemini API:</strong> AI-generated content is subject to <a href="https://ai.google.dev/terms" class="text-primary hover:text-primary-dark underline" target="_blank" rel="noopener">Google's Terms of Service</a>.</li>
+            <li><strong>Apify:</strong> Data collection is subject to <a href="https://apify.com/terms" class="text-primary hover:text-primary-dark underline" target="_blank" rel="noopener">Apify's Terms of Use</a>.</li>
+          </ul>
+          <p>We are not responsible for the availability, accuracy, or practices of third-party services. Changes to third-party APIs or terms may affect Service functionality.</p>
+        </section>
+
+        <!-- 8 -->
+        <section id="api-limits">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">8. API Usage Limits</h2>
+          <p class="mb-3">Your subscription plan includes specific usage limits for features such as competitor tracking, AI content generation, and scheduling. These limits are described on our pricing page and may vary by plan.</p>
+          <ul class="list-disc list-inside space-y-1 ml-2">
+            <li>Exceeding your plan limits may result in temporary restriction of certain features until your next billing cycle.</li>
+            <li>We reserve the right to implement rate limiting to ensure platform stability.</li>
+            <li>Abuse of API resources may result in account suspension.</li>
+          </ul>
+        </section>
+
+        <!-- 9 -->
+        <section id="warranties">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">9. Disclaimer of Warranties</h2>
+          <p class="uppercase text-sm font-semibold text-gray-600 leading-relaxed">THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE, OR THAT ANY DEFECTS WILL BE CORRECTED. WE DO NOT GUARANTEE THE ACCURACY, COMPLETENESS, OR USEFULNESS OF ANY AI-GENERATED CONTENT OR COMPETITOR ANALYSIS DATA PROVIDED THROUGH THE SERVICE.</p>
+        </section>
+
+        <!-- 10 -->
+        <section id="liability">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">10. Limitation of Liability</h2>
+          <p class="uppercase text-sm font-semibold text-gray-600 leading-relaxed">TO THE MAXIMUM EXTENT PERMITTED BY LAW, PAGEGROWTHPRO AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, USE, OR GOODWILL, ARISING OUT OF OR RELATED TO YOUR USE OF THE SERVICE. OUR TOTAL LIABILITY FOR ANY CLAIMS ARISING FROM YOUR USE OF THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE 12 MONTHS PRECEDING THE CLAIM.</p>
+        </section>
+
+        <!-- 11 -->
+        <section id="indemnification">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">11. Indemnification</h2>
+          <p>You agree to indemnify, defend, and hold harmless PageGrowthPro and its officers, directors, employees, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any third-party rights.</p>
+        </section>
+
+        <!-- 12 -->
+        <section id="termination">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">12. Termination</h2>
+          <ul class="list-disc list-inside space-y-2 ml-2">
+            <li><strong>By you:</strong> You may cancel your subscription and close your account at any time through your account settings or by contacting support.</li>
+            <li><strong>By us:</strong> We may suspend or terminate your account immediately, without prior notice, if you violate these Terms, engage in fraudulent or illegal activity, or abuse the Service.</li>
+            <li><strong>Effect of termination:</strong> Upon termination, your right to use the Service ceases immediately. We may delete your data in accordance with our <a href="privacy.html" class="text-primary hover:text-primary-dark underline">Privacy Policy</a>.</li>
+            <li><strong>Survival:</strong> Sections regarding intellectual property, limitation of liability, indemnification, governing law, and dispute resolution survive termination.</li>
+          </ul>
+        </section>
+
+        <!-- 13 -->
+        <section id="governing-law">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">13. Governing Law</h2>
+          <p>These Terms shall be governed by and construed in accordance with the laws of the State of Florida, United States of America, without regard to its conflict of law provisions. Any legal proceedings arising from these Terms shall be brought exclusively in the state or federal courts located in the State of Florida.</p>
+        </section>
+
+        <!-- 14 -->
+        <section id="disputes">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">14. Dispute Resolution</h2>
+          <p class="mb-3">Before filing a claim, you agree to attempt to resolve disputes informally by contacting us at <a href="mailto:support@pagegrowthpro.com" class="text-primary hover:text-primary-dark underline">support@pagegrowthpro.com</a>. We will work in good faith to resolve the matter within 30 days.</p>
+          <p class="mb-3">If informal resolution fails, disputes shall be resolved through binding arbitration administered by the American Arbitration Association (AAA) in accordance with its Commercial Arbitration Rules. The arbitration shall take place in the State of Florida.</p>
+          <p><strong>Class action waiver:</strong> You agree that any dispute resolution proceedings will be conducted only on an individual basis and not in a class, consolidated, or representative action.</p>
+        </section>
+
+        <!-- 15 -->
+        <section id="changes-terms">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">15. Changes to These Terms</h2>
+          <p>We reserve the right to modify these Terms at any time. Material changes will be communicated via email or a prominent notice on the platform at least 30 days before they take effect. Your continued use of the Service after changes become effective constitutes acceptance of the revised Terms. If you do not agree to the updated Terms, you must stop using the Service and close your account.</p>
+        </section>
+
+        <!-- 16 -->
+        <section id="contact-terms">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">16. Contact Us</h2>
+          <p class="mb-3">If you have any questions about these Terms of Service, please contact us:</p>
+          <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+            <p class="font-semibold text-gray-900">PageGrowthPro</p>
+            <p>Email: <a href="mailto:support@pagegrowthpro.com" class="text-primary hover:text-primary-dark underline">support@pagegrowthpro.com</a></p>
+            <p>Website: <a href="https://pagegrowthpro.com" class="text-primary hover:text-primary-dark underline">pagegrowthpro.com</a></p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-400 mt-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+        <div>
+          <a href="landing.html" class="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">PageGrowthPro</a>
+          <p class="text-sm mt-2 text-gray-500">Grow your Facebook Page with AI-powered insights.</p>
+        </div>
+        <div class="flex flex-wrap gap-6 text-sm">
+          <a href="landing.html#features" class="hover:text-white transition">Features</a>
+          <a href="landing.html#pricing" class="hover:text-white transition">Pricing</a>
+          <a href="login.html" class="hover:text-white transition">Login</a>
+          <a href="privacy.html" class="hover:text-white transition">Privacy</a>
+          <a href="terms.html" class="hover:text-white transition">Terms</a>
+          <a href="cookies.html" class="hover:text-white transition">Cookies</a>
+        </div>
+      </div>
+      <div class="border-t border-gray-800 mt-8 pt-8 text-sm text-center text-gray-500">
+        &copy; 2026 PageGrowthPro. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('mobile-menu-btn-terms').addEventListener('click', function() {
+      document.getElementById('mobile-menu-terms').classList.toggle('hidden');
+    });
+  </script>
+</body>
+</html>

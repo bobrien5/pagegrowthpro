@@ -42,11 +42,23 @@
         </div>
       </div>
       <div id="settingsPanel" class="hidden mt-6 bg-white/10 rounded-xl p-5 backdrop-blur-sm">
-        <h3 class="font-semibold text-white mb-4">API Settings</h3>
+        <h3 class="font-semibold text-white mb-4">Settings</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div><label class="block text-xs font-medium text-gray-300 mb-1">Google Gemini API Key</label><input id="settingGeminiKey" type="password" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token</label><input id="settingFbToken" type="password" placeholder="EAAx..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page ID</label><input id="settingFbPageId" type="text" placeholder="123456789..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Your Facebook Page</label>
+            <div id="fbConnectionStatus" class="mb-2"><span class="text-xs text-gray-400">Not connected</span></div>
+            <div id="fbConnectForm">
+              <input id="settingFbPageUrl" type="text" placeholder="https://facebook.com/yourpage" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+              <button onclick="handleFbConnect()" id="fbConnectBtn" class="bg-[#1877F2] hover:bg-[#166FE5] text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2 w-full justify-center">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                Connect Page
+              </button>
+            </div>
+            <input id="settingFbToken" type="hidden">
+            <input id="settingFbPageId" type="hidden">
+          </div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Facebook Page Access Token <span class="text-gray-500">(optional, for scheduling)</span></label><input id="settingFbTokenManual" type="password" placeholder="EAAx... (from Graph API Explorer)" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
         </div>
         <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
       </div>
@@ -57,7 +69,7 @@
   <div id="connectState" class="max-w-7xl mx-auto px-6 py-20 text-center">
     <div class="text-6xl mb-4">📈</div>
     <h2 class="text-2xl font-bold text-gray-700">Connect Your Facebook Page</h2>
-    <p class="text-gray-500 mt-2 max-w-lg mx-auto">Add your Page Access Token and Page ID in Settings (gear icon) to pull your real post performance data from Facebook.</p>
+    <p class="text-gray-500 mt-2 max-w-lg mx-auto">Paste your Facebook page URL in Settings (gear icon) to connect, then add a Page Access Token from the <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-blue-600 underline">Graph API Explorer</a> to pull live analytics.</p>
     <button onclick="toggleSettings()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition">Open Settings</button>
     <div class="mt-4 text-sm text-gray-400">Or <button onclick="loadPageData()" class="text-blue-600 underline">try loading now</button> if you've already configured your token.</div>
   </div>
@@ -71,6 +83,7 @@
         <div>
           <h2 class="text-xl font-bold">Your Page — <span id="yourPageName">allinclusivehq</span></h2>
           <p class="text-green-200 text-sm mt-1">Live data from Facebook Graph API</p>
+          <p id="noTokenMessage" class="hidden text-yellow-200 text-xs mt-1">Add a Page Access Token in Settings to load live data. Get one from <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="underline">Graph API Explorer</a>.</p>
         </div>
         <button onclick="loadPageData()" class="bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -182,27 +195,86 @@
     document.addEventListener('DOMContentLoaded', initSettings);
 
     let yourPosts = []; // Posts from your actual page via Graph API
-    const FB_API = 'https://graph.facebook.com/v19.0';
+    const FB_API = 'https://graph.facebook.com/v22.0';
 
     // Load competitor data from file
     initDataLoading(renderCompetitorData);
 
+    // --- Facebook Connect Handler (URL-based, same as insights page) ---
+    async function handleFbConnect() {
+      const btn = document.getElementById('fbConnectBtn');
+      const statusEl = document.getElementById('fbConnectionStatus');
+      const urlInput = document.getElementById('settingFbPageUrl');
+      const rawUrl = urlInput?.value.trim();
+      if (!rawUrl) { statusEl.innerHTML = '<span class="text-xs text-red-400">Paste your Facebook page URL</span>'; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Connecting...';
+      try {
+        let pageId = rawUrl;
+        if (rawUrl.includes('facebook.com')) {
+          const url = new URL(rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl);
+          const path = url.pathname.replace(/^\//, '').replace(/\/$/, '');
+          if (url.searchParams.get('id')) pageId = url.searchParams.get('id');
+          else if (path) pageId = path.split('/')[0];
+        }
+        const pageName = pageId.replace(/[_.-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+        s.fbPageId = pageId; s.fbPageName = pageName; s.fbPageUrl = rawUrl; s.fbConnectedAt = new Date().toISOString();
+        localStorage.setItem('vpro_dashboard_settings', JSON.stringify(s));
+        statusEl.innerHTML = `<span class="text-xs text-green-400 flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg> Connected: <strong>${pageName}</strong></span>`;
+        document.getElementById('fbConnectForm').classList.add('hidden');
+      } catch (err) {
+        statusEl.innerHTML = `<span class="text-xs text-red-400">${err.message}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Connect Page';
+      }
+    }
+
+    // Check existing FB connection on load
+    function checkExistingFbConnection() {
+      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+      if (s.fbPageId) {
+        const statusEl = document.getElementById('fbConnectionStatus');
+        if (statusEl) statusEl.innerHTML = `<span class="text-xs text-green-400 flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg> Connected: <strong>${s.fbPageName || s.fbPageId}</strong></span>`;
+        document.getElementById('fbConnectForm')?.classList.add('hidden');
+      }
+    }
+
     // Try to auto-load your page data on start
     setTimeout(() => {
+      checkExistingFbConnection();
       const s = loadSettings();
-      if (s.fbPageToken && s.fbPageId) loadPageData();
+      // Need a Page Access Token (from Graph API Explorer) for live analytics
+      if ((s.fbPageToken || s.fbTokenManual) && s.fbPageId) loadPageData();
+      else if (s.fbPageId) {
+        // Page connected but no token — show dashboard with placeholder
+        document.getElementById('connectState').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('yourPageName').textContent = s.fbPageName || s.fbPageId;
+        document.getElementById('noTokenMessage')?.classList.remove('hidden');
+      }
     }, 500);
 
     // --- Fetch YOUR page data from Facebook Graph API ---
     async function loadPageData() {
-      let token, pageId;
-      try {
-        const creds = getFbCredentials();
-        token = creds.token;
-        pageId = creds.pageId;
-      } catch (e) {
-        alert(e.message);
-        return;
+      const s = loadSettings();
+      let token = s.fbPageToken || s.fbTokenManual;
+      let pageId = s.fbPageId;
+
+      if (!token || !pageId) {
+        // Check if manual token was entered
+        const manualInput = document.getElementById('settingFbTokenManual');
+        if (manualInput?.value.trim()) {
+          token = manualInput.value.trim();
+          const ss = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+          ss.fbTokenManual = token;
+          localStorage.setItem('vpro_dashboard_settings', JSON.stringify(ss));
+        }
+        if (!token) {
+          alert('Add a Page Access Token from the Graph API Explorer to see live analytics.');
+          return;
+        }
       }
 
       document.getElementById('connectState').classList.add('hidden');

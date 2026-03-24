@@ -122,7 +122,19 @@
 
     <!-- Top Posts Table -->
     <section class="card-light rounded-xl p-6 shadow-sm">
-      <h3 class="font-bold text-lg mb-4">Top 20 Competitor Posts by Engagement</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg">Top Competitor Posts by Engagement</h3>
+        <label class="flex items-center gap-2 text-sm text-gray-500">
+          Show
+          <select id="topPostsCount" onchange="renderTopPosts()" class="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All</option>
+          </select>
+          posts
+        </label>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -142,10 +154,30 @@
       </div>
     </section>
 
-    <!-- Winning Themes -->
-    <section class="card-light rounded-xl p-6 shadow-sm">
-      <h3 class="font-bold text-lg mb-4">Winning Themes from Competitors</h3>
-      <div id="themesCloud" class="flex flex-wrap gap-2"></div>
+    <!-- Add Competitor Pages -->
+    <section class="card-light rounded-xl p-6 shadow-sm border-2 border-dashed border-blue-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="font-bold text-lg">Manage Competitor Pages</h3>
+          <p class="text-sm text-gray-500 mt-1">Add Facebook page URLs to scrape and analyze. Max 25 pages.</p>
+        </div>
+        <span id="scrapeStatus" class="text-sm font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-500 hidden"></span>
+      </div>
+      <div class="flex gap-2">
+        <textarea id="newCompetitors" rows="3" placeholder="https://www.facebook.com/pagename&#10;Paste one URL per line..." class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"></textarea>
+      </div>
+      <div class="flex items-center gap-4 mt-3">
+        <button id="scrapeBtn" onclick="scrapeNewCompetitors()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Scrape & Add to Dashboard
+        </button>
+        <span class="text-xs text-gray-400">Uses your Apify API token</span>
+      </div>
+      <div id="scrapeLog" class="hidden mt-4 bg-gray-900 text-green-400 rounded-lg p-4 font-mono text-xs max-h-48 overflow-y-auto"></div>
+      <div class="mt-4">
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Currently Tracked Pages</p>
+        <div id="trackedPages" class="flex flex-wrap gap-2"></div>
+      </div>
     </section>
 
     <!-- AI Post Generator -->
@@ -377,7 +409,7 @@
       renderStats();
       renderPlaybook();
       renderTopPosts();
-      renderThemes();
+      renderTrackedPages();
       initPostGenerator();
     });
 
@@ -424,7 +456,9 @@
     // --- Top Posts ---
     function renderTopPosts() {
       const tbody = document.getElementById('topPostsBody');
-      tbody.innerHTML = posts.slice(0, 20).map((p, i) => {
+      const countSel = document.getElementById('topPostsCount')?.value || '20';
+      const limit = countSel === 'all' ? posts.length : parseInt(countSel);
+      tbody.innerHTML = posts.slice(0, limit).map((p, i) => {
         const badge = getTypeBadge(p.contentType);
         const preview = p.text ? p.text.slice(0, 80) + (p.text.length > 80 ? '...' : '') : '(no text)';
         const link = p.postUrl ? `<a href="${p.postUrl}" target="_blank" class="hover:underline">${preview}</a>` : preview;
@@ -441,32 +475,119 @@
       }).join('');
     }
 
-    // --- Themes ---
-    function renderThemes() {
-      const stopWords = new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','to','of','in','for','on','with','at','by','from','as','into','through','during','before','after','above','below','between','out','off','over','under','again','further','then','once','here','there','when','where','why','how','all','each','every','both','few','more','most','other','some','such','no','nor','not','only','own','same','so','than','too','very','just','because','but','and','or','if','this','that','these','those','it','its','i','me','my','we','our','you','your','he','him','his','she','her','they','them','their','what','which','who','whom','up','about','get','got','like','one','also','new','know','see','go','come','make','take','want','look','use','find','give','tell','think','say','try','ask','need','feel','become','leave','put','mean','keep','let','begin','seem','help','show','hear','play','run','move','live','believe','bring','happen','write','provide','sit','stand','lose','pay','meet','include','continue','set','learn','change','lead','understand','watch','follow','stop','create','speak','read','allow','add','spend','grow','open','walk','win','teach','offer','remember','love','consider','appear','buy','wait','serve','die','send','expect','build','stay','fall','cut','reach','kill','remain']);
-      const wordCounts = {};
-      posts.forEach(p => {
-        (p.fullText || p.text || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).forEach(w => {
-          if (w.length > 3 && !stopWords.has(w)) wordCounts[w] = (wordCounts[w] || 0) + 1;
+    // --- Tracked Pages + Scraping ---
+    function renderTrackedPages() {
+      const el = document.getElementById('trackedPages');
+      if (!el) return;
+      const pages = [...new Set(posts.map(p => p.pageName).filter(Boolean))];
+      el.innerHTML = pages.map(name => `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+          ${name}
+        </span>
+      `).join('');
+    }
+
+    const APIFY_API_URL = 'https://api.apify.com/v2';
+    const APIFY_ACTOR_ID = 'apify~facebook-posts-scraper';
+    let _apifyToken = '';
+
+    function getApifyTokenLocal() {
+      if (_apifyToken) return _apifyToken;
+      // Try Supabase settings, then localStorage, then prompt
+      const s = loadSettings();
+      if (s.apifyToken) { _apifyToken = s.apifyToken; return _apifyToken; }
+      const token = prompt('Enter your Apify API token:');
+      if (!token) throw new Error('Apify token required');
+      _apifyToken = token;
+      s.apifyToken = token;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+      return token;
+    }
+
+    function logScrape(msg) {
+      const log = document.getElementById('scrapeLog');
+      log.classList.remove('hidden');
+      log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function setScrapeStatus(text, color) {
+      const el = document.getElementById('scrapeStatus');
+      el.classList.remove('hidden');
+      el.className = `text-sm font-medium px-3 py-1 rounded-full ${color}`;
+      el.textContent = text;
+    }
+
+    async function scrapeNewCompetitors() {
+      const textarea = document.getElementById('newCompetitors');
+      const urls = textarea.value.trim().split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+      if (!urls.length) { alert('Paste at least one Facebook page URL'); return; }
+
+      let token;
+      try { token = getApifyTokenLocal(); } catch { return; }
+
+      const btn = document.getElementById('scrapeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Scraping...';
+      btn.classList.replace('bg-blue-600', 'bg-gray-500');
+      setScrapeStatus('Scraping...', 'bg-yellow-100 text-yellow-700');
+      logScrape(`Starting scrape for ${urls.length} page(s)...`);
+
+      try {
+        logScrape('Sending to Apify...');
+        const startRes = await fetch(`${APIFY_API_URL}/acts/${APIFY_ACTOR_ID}/runs?token=${token}&waitForFinish=300`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ startUrls: urls.map(url => ({ url })), resultsLimit: 50 }),
         });
-      });
-      const wordEngagement = {};
-      posts.forEach(p => {
-        [...new Set((p.fullText || p.text || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/))].forEach(w => {
-          if (w.length > 3 && !stopWords.has(w) && wordCounts[w] >= 3) {
-            if (!wordEngagement[w]) wordEngagement[w] = { total: 0, count: 0 };
-            wordEngagement[w].total += p.totalEngagement;
-            wordEngagement[w].count++;
+        if (!startRes.ok) throw new Error(`Apify error: ${startRes.status}`);
+        const runData = (await startRes.json()).data;
+        logScrape(`Run started: ${runData.id}`);
+
+        let datasetId = runData.defaultDatasetId;
+        if (runData.status !== 'SUCCEEDED') {
+          logScrape('Waiting for completion...');
+          while (true) {
+            const pollRes = await fetch(`${APIFY_API_URL}/actor-runs/${runData.id}?token=${token}`);
+            const pollData = (await pollRes.json()).data;
+            if (pollData.status === 'SUCCEEDED') { datasetId = pollData.defaultDatasetId; logScrape('Run completed!'); break; }
+            if (pollData.status === 'FAILED' || pollData.status === 'ABORTED') throw new Error(`Run ${pollData.status}`);
+            await new Promise(r => setTimeout(r, 5000));
+            logScrape('Still running...');
           }
-        });
-      });
-      const themes = Object.entries(wordEngagement).map(([word, d]) => ({ word, avgEng: d.total / d.count, count: d.count })).sort((a, b) => b.avgEng - a.avgEng).slice(0, 40);
-      const maxAvg = themes[0]?.avgEng || 1;
-      document.getElementById('themesCloud').innerHTML = themes.map(t => {
-        const size = 0.75 + (t.avgEng / maxAvg) * 1.0;
-        const opacity = 0.5 + (t.avgEng / maxAvg) * 0.5;
-        return `<span class="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-medium cursor-default hover:bg-blue-200 transition" style="font-size:${size}rem; opacity:${opacity}" title="Avg engagement: ${Math.round(t.avgEng)} | Used ${t.count}x">${t.word}</span>`;
-      }).join('');
+        }
+
+        logScrape('Downloading results...');
+        const dataRes = await fetch(`${APIFY_API_URL}/datasets/${datasetId}/items?token=${token}&format=json&clean=true`);
+        const rawPosts = await dataRes.json();
+        logScrape(`Got ${rawPosts.length} new posts`);
+
+        const newAnalyzed = rawPosts.map(analyzePost);
+        const beforeCount = posts.length;
+        posts = [...posts, ...newAnalyzed].sort((a, b) => b.totalEngagement - a.totalEngagement);
+        logScrape(`Merged: ${beforeCount} + ${newAnalyzed.length} = ${posts.length} total posts`);
+
+        // Re-render entire dashboard
+        document.getElementById('postCount').textContent = `${posts.length} posts from ${new Set(posts.map(p => p.pageName)).size} pages`;
+        renderStats();
+        renderPlaybook();
+        renderTopPosts();
+        renderTrackedPages();
+        initPostGenerator();
+
+        setScrapeStatus(`+${newAnalyzed.length} posts added`, 'bg-green-100 text-green-700');
+        logScrape('Dashboard updated!');
+        textarea.value = '';
+
+      } catch (err) {
+        logScrape(`ERROR: ${err.message}`);
+        setScrapeStatus('Error', 'bg-red-100 text-red-700');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Scrape & Add to Dashboard';
+        btn.classList.replace('bg-gray-500', 'bg-blue-600');
+      }
     }
 
     // --- Brand Settings ---

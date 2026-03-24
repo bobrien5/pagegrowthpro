@@ -121,7 +121,22 @@ async function connectFacebookPage() {
     selectedPage = await showPagePicker(pages);
   }
 
-  // Step 4: Store everything
+  // Step 4: Ensure we have a valid PAGE access token (not just user token)
+  if (!selectedPage.access_token || selectedPage.access_token === shortLivedToken) {
+    // Try to get a proper page token by requesting it directly
+    console.log('[FB] Requesting page access token for', selectedPage.id);
+    const ptRes = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${selectedPage.id}?fields=access_token&access_token=${shortLivedToken}`);
+    const ptData = await ptRes.json();
+    if (ptData.access_token) {
+      selectedPage.access_token = ptData.access_token;
+      console.log('[FB] Got page access token');
+    } else {
+      console.warn('[FB] Could not get page token, using user token as fallback');
+      selectedPage.access_token = shortLivedToken;
+    }
+  }
+
+  // Store everything
   storePageConnection(selectedPage, shortLivedToken);
 
   // Step 5: Try to save to Supabase too

@@ -48,15 +48,22 @@ function getGeminiKey() {
 }
 
 async function getFbCredentials() {
-  // Try Supabase (Meta Login) first
-  if (typeof checkFacebookConnection === 'function') {
-    const fb = await checkFacebookConnection();
-    if (fb) return { token: fb.pageToken, pageId: fb.pageId, pageName: fb.pageName };
-  }
-  // Fallback to localStorage
+  // Read from localStorage (set by meta-login.js storePageConnection)
   const s = loadSettings();
-  if (s.fbPageToken && s.fbPageId) return { token: s.fbPageToken, pageId: s.fbPageId };
-  throw new Error('Facebook page not connected. Connect your page in Settings or the Analytics tab.');
+  if (s.fbPageToken && s.fbPageId) {
+    // Quick validate — token should start with EAA (page/user tokens) and be >20 chars
+    if (s.fbPageToken.length > 20) {
+      return { token: s.fbPageToken, pageId: s.fbPageId, pageName: s.fbPageName };
+    }
+  }
+  // Try Supabase (Meta Login) as fallback
+  try {
+    if (typeof checkFacebookConnection === 'function') {
+      const fb = await checkFacebookConnection();
+      if (fb && fb.pageToken) return { token: fb.pageToken, pageId: fb.pageId, pageName: fb.pageName };
+    }
+  } catch (e) { console.warn('Supabase FB check failed:', e.message); }
+  throw new Error('Facebook page not connected. Connect your page in Settings (gear icon on the Insights page).');
 }
 
 function getToken() {

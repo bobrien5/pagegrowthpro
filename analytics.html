@@ -21,30 +21,28 @@
 <body class="bg-gray-50 text-gray-900 min-h-screen">
 
   <!-- Header -->
-  <header class="gradient-bg text-white py-6 px-6">
-    <div class="max-w-7xl mx-auto">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-6">
-          <div>
-            <h1 class="text-2xl font-extrabold tracking-tight"><span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span></h1>
-            <p class="text-gray-400 text-xs mt-0.5">Facebook Content Intelligence</p>
-          </div>
+  <header class="gradient-bg text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-4 sm:gap-6">
+          <a href="/dashboard" class="text-lg sm:text-xl font-extrabold tracking-tight whitespace-nowrap">
+            <span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span>
+          </a>
           <nav class="hidden md:flex items-center gap-1" id="navBar"></nav>
         </div>
-        <div class="flex items-center gap-3">
-          <span id="postCount" class="text-sm text-gray-400"></span>
-          <label class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg cursor-pointer transition">
-            Load Data <input type="file" id="fileInput" accept=".json" class="hidden">
-          </label>
+        <div class="flex items-center gap-2">
           <button onclick="toggleSettings()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition" title="Settings">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           </button>
+          <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="md:hidden bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
         </div>
       </div>
-      <div id="settingsPanel" class="hidden mt-6 bg-white/10 rounded-xl p-5 backdrop-blur-sm">
+      <div id="mobileMenu" class="hidden md:hidden pb-4 space-y-1"></div>
+      <div id="settingsPanel" class="hidden mt-2 mb-4 bg-white/10 rounded-xl p-4 sm:p-5 backdrop-blur-sm">
         <h3 class="font-semibold text-white mb-4">Settings</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Google Gemini API Key</label><input id="settingGeminiKey" type="password" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-medium text-gray-300 mb-1">Your Facebook Page</label>
             <div id="fbConnectionStatus" class="mb-2"><span class="text-xs text-gray-400">Not connected</span></div>
@@ -58,12 +56,13 @@
             <input id="settingFbToken" type="hidden">
             <input id="settingFbPageId" type="hidden">
           </div>
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Apify API Token</label><input id="settingApifyToken" type="password" placeholder="apify_api_..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          <div><label class="block text-xs font-medium text-gray-300 mb-1">Apify API Token</label><input id="settingApifyToken" type="password" placeholder="apify_api_..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"><input id="settingGeminiKey" type="hidden"></div>
         </div>
         <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
       </div>
     </div>
   </header>
+  <input type="file" id="fileInput" accept=".json" class="hidden">
 
   <!-- Connect State -->
   <div id="connectState" class="max-w-7xl mx-auto px-6 py-20 text-center">
@@ -74,7 +73,7 @@
   </div>
 
   <!-- Dashboard -->
-  <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-8 space-y-8">
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
 
     <!-- Your Page Summary -->
     <section class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-6 text-white">
@@ -190,6 +189,7 @@
   <script src="js/dashboard-shared.js"></script>
   <script>
     document.getElementById('navBar').innerHTML = renderNav('analytics');
+    document.getElementById('mobileMenu').innerHTML = renderNav('analytics').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base');
     document.addEventListener('DOMContentLoaded', initSettings);
 
     let yourPosts = []; // Posts from your actual page via Graph API

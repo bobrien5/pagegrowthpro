@@ -98,7 +98,7 @@ async function connectFacebookPage() {
         reject(new Error('Facebook login cancelled or failed'));
       }
     }, {
-      scope: 'pages_manage_posts,pages_read_engagement,pages_show_list,pages_read_user_content',
+      scope: 'pages_manage_posts,pages_read_engagement,pages_show_list,pages_read_user_content,business_management',
       auth_type: 'rerequest',
       return_scopes: true,
     });

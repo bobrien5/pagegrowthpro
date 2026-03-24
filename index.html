@@ -60,21 +60,9 @@
             <div id="fbConnectionStatus" class="mb-2">
               <span class="text-xs text-gray-400">Not connected</span>
             </div>
-            <div id="fbLoginBtnContainer" class="mb-2">
-              <fb:login-button
-                scope="pages_manage_posts,pages_read_engagement,pages_show_list,pages_read_user_content"
-                onlogin="checkLoginState();"
-                data-size="medium"
-                data-button-type="continue_with"
-                data-layout="default"
-                data-auto-logout-link="false"
-                data-use-continue-as="true"
-                data-width="">
-              </fb:login-button>
-            </div>
-            <button onclick="handleFbConnect()" id="fbConnectBtn" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              Reconnect Page
+            <button onclick="handleFbConnect()" id="fbConnectBtn" class="bg-[#1877F2] hover:bg-[#166FE5] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              Connect with Facebook
             </button>
             <input id="settingFbToken" type="hidden">
             <input id="settingFbPageId" type="hidden">
@@ -414,57 +402,26 @@
 
   <script src="js/dashboard-shared.js"></script>
   <script>
-    // --- Facebook Login Button Callback (called by fb:login-button) ---
-    function checkLoginState() {
-      FB.getLoginStatus(function(response) {
-        statusChangeCallback(response);
-      });
-    }
-
-    async function statusChangeCallback(response) {
-      const statusEl = document.getElementById('fbConnectionStatus');
-      const loginBtnContainer = document.getElementById('fbLoginBtnContainer');
-      const reconnectBtn = document.getElementById('fbConnectBtn');
-
-      if (response.status === 'connected') {
-        // Person is logged into Facebook AND authorized your app
-        if (statusEl) statusEl.innerHTML = '<span class="text-xs text-yellow-400">Fetching your pages...</span>';
-        try {
-          const result = await connectFacebookPage();
-          updateFbStatusUI(result.pageName, true);
-          // Hide the FB login button, show reconnect
-          if (loginBtnContainer) loginBtnContainer.classList.add('hidden');
-          if (reconnectBtn) reconnectBtn.classList.remove('hidden');
-        } catch (err) {
-          if (statusEl) statusEl.innerHTML = `<span class="text-xs text-red-400">${err.message}</span>`;
-        }
-      } else if (response.status === 'not_authorized') {
-        // Logged into Facebook but hasn't authorized the app
-        if (statusEl) statusEl.innerHTML = '<span class="text-xs text-yellow-400">Please authorize PageGrowthPro to manage your page</span>';
-        if (loginBtnContainer) loginBtnContainer.classList.remove('hidden');
-        if (reconnectBtn) reconnectBtn.classList.add('hidden');
-      } else {
-        // Not logged into Facebook
-        if (statusEl) statusEl.innerHTML = '<span class="text-xs text-gray-400">Not connected — log in with Facebook above</span>';
-        if (loginBtnContainer) loginBtnContainer.classList.remove('hidden');
-        if (reconnectBtn) reconnectBtn.classList.add('hidden');
-      }
-    }
-
-    // --- Manual reconnect handler ---
+    // --- Facebook OAuth Connect ---
     async function handleFbConnect() {
       const btn = document.getElementById('fbConnectBtn');
+      const statusEl = document.getElementById('fbConnectionStatus');
       btn.disabled = true;
       btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Connecting...';
       try {
         const result = await connectFacebookPage();
-        updateFbStatusUI(result.pageName, true);
+        statusEl.innerHTML = `<span class="text-xs text-green-400 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+          Connected: <strong>${result.pageName}</strong>
+        </span>`;
+        btn.innerHTML = 'Reconnect Page';
+        btn.classList.replace('bg-[#1877F2]', 'bg-green-600');
+        btn.classList.replace('hover:bg-[#166FE5]', 'hover:bg-green-700');
       } catch (err) {
-        const statusEl = document.getElementById('fbConnectionStatus');
-        if (statusEl) statusEl.innerHTML = `<span class="text-xs text-red-400">${err.message}</span>`;
+        statusEl.innerHTML = `<span class="text-xs text-red-400">${err.message}</span>`;
+        btn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Try Again';
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Reconnect Page';
       }
     }
 
@@ -472,26 +429,14 @@
     function checkExistingFbConnection() {
       const conn = getStoredPageConnection();
       if (conn) {
-        updateFbStatusUI(conn.pageName, true);
-        // Already connected — hide FB login button, show reconnect
-        const loginBtnContainer = document.getElementById('fbLoginBtnContainer');
-        const reconnectBtn = document.getElementById('fbConnectBtn');
-        if (loginBtnContainer) loginBtnContainer.classList.add('hidden');
-        if (reconnectBtn) reconnectBtn.classList.remove('hidden');
+        const statusEl = document.getElementById('fbConnectionStatus');
+        const btn = document.getElementById('fbConnectBtn');
+        if (statusEl) statusEl.innerHTML = `<span class="text-xs text-green-400 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+          Connected: <strong>${conn.pageName}</strong>
+        </span>`;
+        if (btn) { btn.textContent = 'Reconnect Page'; btn.classList.replace('bg-[#1877F2]', 'bg-green-600'); }
       }
-      // Listen for FB SDK ready — auto-checks login status
-      window.addEventListener('fb-sdk-ready', (e) => {
-        if (e.detail.status === 'connected') {
-          const conn = getStoredPageConnection();
-          if (conn) {
-            updateFbStatusUI(conn.pageName, true);
-            const loginBtnContainer = document.getElementById('fbLoginBtnContainer');
-            const reconnectBtn = document.getElementById('fbConnectBtn');
-            if (loginBtnContainer) loginBtnContainer.classList.add('hidden');
-            if (reconnectBtn) reconnectBtn.classList.remove('hidden');
-          }
-        }
-      });
     }
 
     // --- Init ---

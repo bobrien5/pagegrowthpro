@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PageGrowthPro — Content Calendar</title>
+  <title>PageGrowthPro — Scheduler</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
   <style>
@@ -13,9 +12,6 @@
     body { font-family: 'Inter', sans-serif; }
     .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
     .card-light { background: #ffffff; border: 1px solid #e2e8f0; }
-    canvas { max-height: 300px; }
-    .heatmap-cell { transition: all 0.2s; cursor: default; }
-    .heatmap-cell:hover { transform: scale(1.3); z-index: 10; }
   </style>
   <script>tailwind.config = { theme: { extend: { colors: { dark: { 800: '#1e293b', 900: '#0f172a' } } } } }</script>
 </head>
@@ -32,9 +28,6 @@
           <nav class="hidden md:flex items-center gap-1" id="navBar"></nav>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="toggleSettings()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition" title="Settings">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          </button>
           <button onclick="signOut()" class="hidden sm:block bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-3 py-2 rounded-lg transition">Sign Out</button>
           <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="md:hidden bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -42,13 +35,6 @@
         </div>
       </div>
       <div id="mobileMenu" class="hidden md:hidden pb-4 space-y-1"></div>
-      <div id="settingsPanel" class="hidden mt-2 mb-4 bg-white/10 rounded-xl p-4 sm:p-5 backdrop-blur-sm">
-        <h3 class="font-semibold text-white mb-4">Settings</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div><label class="block text-xs font-medium text-gray-300 mb-1">Google Gemini API Key</label><input id="settingGeminiKey" type="password" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
-        </div>
-        <div class="flex items-center gap-4 mt-4"><button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Save</button><span id="settingsSaved" class="text-sm text-green-400 hidden">Saved!</span></div>
-      </div>
     </div>
   </header>
 
@@ -56,148 +42,123 @@
 
   <div id="loadingState" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center">
     <svg class="w-10 h-10 animate-spin mx-auto text-purple-500 mb-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-    <p class="text-gray-500 text-sm">Loading data...</p>
+    <p class="text-gray-500 text-sm">Loading scheduler...</p>
   </div>
 
-  <div id="dashboard" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
 
-    <!-- Engagement Heatmap -->
-    <section class="card-light rounded-xl p-6 shadow-sm">
-      <h3 class="font-bold text-lg mb-2">Best Times to Post — Engagement Heatmap</h3>
-      <p class="text-sm text-gray-500 mb-4">Darker = higher average engagement. Hover for details.</p>
-      <div id="heatmapContainer" class="overflow-x-auto"></div>
+    <!-- Optimal Times Banner -->
+    <section class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 sm:p-6 text-white">
+      <h2 class="text-lg font-bold mb-1">Best Times to Post</h2>
+      <p class="text-blue-200 text-sm mb-4">Based on competitor engagement data</p>
+      <div id="optimalTimes" class="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3"></div>
     </section>
 
-    <!-- Optimal Weekly Schedule -->
-    <section class="card-light rounded-xl p-6 shadow-sm">
-      <h3 class="font-bold text-lg mb-2">Recommended Weekly Schedule</h3>
-      <p class="text-sm text-gray-500 mb-4">Top 7 posting slots based on competitor engagement data</p>
-      <div id="weeklySchedule" class="grid grid-cols-1 md:grid-cols-7 gap-3"></div>
-    </section>
-
-    <!-- Charts Row -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="card-light rounded-xl p-6 shadow-sm">
-        <h3 class="font-bold text-lg mb-4">Engagement by Hour</h3>
-        <canvas id="chartPostingTimes"></canvas>
-      </div>
-      <div class="card-light rounded-xl p-6 shadow-sm">
-        <h3 class="font-bold text-lg mb-4">Engagement by Day of Week</h3>
-        <canvas id="chartDayOfWeek"></canvas>
-      </div>
-    </section>
-
-    <!-- Content Calendar -->
-    <section class="card-light rounded-xl p-6 shadow-sm">
+    <!-- Calendar -->
+    <section class="card-light rounded-xl p-4 sm:p-6 shadow-sm">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="font-bold text-lg">Content Calendar</h3>
-          <p class="text-sm text-gray-500 mt-1">Your published and scheduled posts</p>
+          <p class="text-sm text-gray-500 mt-0.5">Your published and scheduled posts</p>
         </div>
         <div class="flex items-center gap-2">
+          <button onclick="goToToday()" class="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50 transition">Today</button>
           <button onclick="prevMonth()" class="p-1.5 rounded-lg hover:bg-gray-100 transition">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
           </button>
-          <span id="calendarMonth" class="text-sm font-semibold text-gray-700 w-32 text-center"></span>
+          <span id="calendarMonth" class="text-sm font-semibold text-gray-700 w-36 text-center"></span>
           <button onclick="nextMonth()" class="p-1.5 rounded-lg hover:bg-gray-100 transition">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
       </div>
       <!-- Legend -->
-      <div class="flex items-center gap-4 mb-3 text-xs text-gray-500">
+      <div class="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 text-xs text-gray-500">
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Published</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Scheduled</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Draft</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Hot time</span>
       </div>
       <!-- Calendar Grid -->
-      <div class="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
-        <!-- Day headers -->
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Mon</div>
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Tue</div>
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Wed</div>
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Thu</div>
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Fri</div>
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Sat</div>
-        <div class="bg-gray-50 py-2 text-center text-xs font-semibold text-gray-500">Sun</div>
-        <!-- Calendar cells injected by JS -->
-      </div>
-      <div id="calendarGrid" class="grid grid-cols-7 gap-px bg-gray-200 overflow-hidden rounded-b-xl"></div>
-      <!-- Upcoming scheduled posts list -->
-      <div id="upcomingPosts" class="mt-6 hidden">
-        <h4 class="font-semibold text-sm text-gray-700 mb-3">Upcoming Scheduled Posts</h4>
-        <div id="upcomingList" class="space-y-2"></div>
+      <div class="rounded-xl overflow-hidden border border-gray-200">
+        <div class="grid grid-cols-7 bg-gray-50">
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Mon</div>
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Tue</div>
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Wed</div>
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Thu</div>
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Fri</div>
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Sat</div>
+          <div class="py-2.5 text-center text-xs font-semibold text-gray-500 border-b border-gray-200">Sun</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-px bg-gray-200"></div>
       </div>
     </section>
+
+    <!-- Upcoming Posts -->
+    <section id="upcomingSection" class="hidden card-light rounded-xl p-4 sm:p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-3">Upcoming Scheduled Posts</h3>
+      <div id="upcomingList" class="space-y-2"></div>
+    </section>
+
+    <!-- Recent Published Posts -->
+    <section class="card-light rounded-xl p-4 sm:p-6 shadow-sm">
+      <h3 class="font-bold text-lg mb-3">Recent Posts</h3>
+      <p class="text-sm text-gray-500 mb-4">Your page's recent published posts</p>
+      <div id="recentPostsList" class="space-y-2"></div>
+      <div id="recentPostsEmpty" class="hidden text-center py-8 text-gray-400 text-sm">No published posts found. Connect your page to see your post history.</div>
+    </section>
+
   </div>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-gray-200 py-6 px-4">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
+      <span>&copy; 2026 PageGrowthPro. All rights reserved.</span>
+      <div class="flex gap-4">
+        <a href="/privacy" class="hover:text-gray-600 transition">Privacy</a>
+        <a href="/terms" class="hover:text-gray-600 transition">Terms</a>
+        <a href="/cookies" class="hover:text-gray-600 transition">Cookies</a>
+      </div>
+    </div>
+  </footer>
 
   <script src="js/dashboard-shared.js"></script>
   <script src="js/meta-login.js"></script>
   <script>
-    document.getElementById('navBar').innerHTML = renderNav('calendar');
-    document.getElementById('mobileMenu').innerHTML = renderNav('calendar').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base');
+    document.getElementById('navBar').innerHTML = renderNav('scheduler');
+    document.getElementById('mobileMenu').innerHTML = renderNav('scheduler').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base') + '<button onclick="signOut()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-400 hover:text-white hover:bg-white/10 transition w-full">Sign Out</button>';
     document.addEventListener('DOMContentLoaded', initSettings);
 
-    initDataLoading(renderDashboard);
+    let yourPagePosts = [];
+    let scheduledFbPosts = [];
+    let optimalSlots = [];
 
-    function renderDashboard() {
+    // Auth gate then load
+    (async () => {
+      const user = await authGate();
+      if (!user) return;
+      initDataLoading(renderScheduler);
+    })();
+
+    async function renderScheduler() {
       document.getElementById('loadingState').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
-      renderHeatmap();
-      renderWeeklySchedule();
-      renderCharts();
+
+      // Compute optimal times from competitor data
+      computeOptimalTimes();
+      renderOptimalTimes();
+
+      // Load your page's published posts from FB
+      await loadYourPagePosts();
+
+      // Load scheduled posts from FB
+      await loadScheduledPosts();
+
+      // Render calendar
       renderCalendar();
     }
 
-    // --- Engagement Heatmap (Day x Hour) ---
-    function renderHeatmap() {
-      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-      const hours = Array.from({ length: 24 }, (_, i) => i);
-
-      // Build engagement matrix
-      const matrix = {};
-      days.forEach(d => { matrix[d] = {}; hours.forEach(h => { matrix[d][h] = { total: 0, count: 0 }; }); });
-      posts.filter(p => p.dayOfWeek && p.hour !== null).forEach(p => {
-        matrix[p.dayOfWeek][p.hour].total += p.totalEngagement;
-        matrix[p.dayOfWeek][p.hour].count++;
-      });
-
-      let maxAvg = 0;
-      days.forEach(d => hours.forEach(h => {
-        const cell = matrix[d][h];
-        cell.avg = cell.count > 0 ? cell.total / cell.count : 0;
-        if (cell.avg > maxAvg) maxAvg = cell.avg;
-      }));
-
-      const container = document.getElementById('heatmapContainer');
-      let html = '<div class="inline-block min-w-full"><table class="w-full"><thead><tr><th class="text-xs text-gray-400 font-medium pb-2 pr-2 text-left w-20"></th>';
-      // Show every 2 hours to save space
-      hours.forEach(h => { html += `<th class="text-xs text-gray-400 font-medium pb-2 px-0.5 text-center">${h % 3 === 0 ? formatHour(h) : ''}</th>`; });
-      html += '</tr></thead><tbody>';
-
-      days.forEach(d => {
-        html += `<tr><td class="text-xs font-medium text-gray-600 pr-2 py-0.5">${d.slice(0,3)}</td>`;
-        hours.forEach(h => {
-          const cell = matrix[d][h];
-          const intensity = maxAvg > 0 ? cell.avg / maxAvg : 0;
-          const bg = intensity === 0 ? 'bg-gray-100' : '';
-          const color = intensity > 0 ? `rgba(59, 130, 246, ${0.15 + intensity * 0.85})` : '';
-          const style = color ? `background-color: ${color}` : '';
-          html += `<td class="px-0.5 py-0.5"><div class="heatmap-cell w-full aspect-square rounded-sm ${bg}" style="${style}" title="${d} ${formatHour(h)}: ${Math.round(cell.avg)} avg engagement (${cell.count} posts)"></div></td>`;
-        });
-        html += '</tr>';
-      });
-
-      html += '</tbody></table>';
-      // Legend
-      html += '<div class="flex items-center gap-2 mt-3 text-xs text-gray-400"><span>Low</span>';
-      [0.15, 0.35, 0.55, 0.75, 1.0].forEach(i => { html += `<div class="w-6 h-4 rounded-sm" style="background-color: rgba(59, 130, 246, ${i})"></div>`; });
-      html += '<span>High</span></div></div>';
-      container.innerHTML = html;
-    }
-
-    // --- Recommended Weekly Schedule ---
-    function renderWeeklySchedule() {
+    // --- Optimal Times (from competitor data) ---
+    function computeOptimalTimes() {
       const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
       const slots = [];
 
@@ -211,79 +172,131 @@
       slots.forEach(s => s.avg = s.total / s.count);
       slots.sort((a, b) => b.avg - a.avg);
 
-      // Pick best slot per day
-      const bestPerDay = {};
+      // Best slot per day
+      optimalSlots = [];
       days.forEach(d => {
         const daySlots = slots.filter(s => s.day === d && s.count >= 2);
-        bestPerDay[d] = daySlots[0] || null;
+        if (daySlots[0]) optimalSlots.push(daySlots[0]);
       });
+    }
 
-      const maxSlotAvg = Math.max(...Object.values(bestPerDay).filter(Boolean).map(s => s.avg), 1);
+    function renderOptimalTimes() {
+      const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const maxAvg = Math.max(...optimalSlots.map(s => s.avg), 1);
 
-      document.getElementById('weeklySchedule').innerHTML = days.map(d => {
-        const slot = bestPerDay[d];
-        const intensity = slot ? slot.avg / maxSlotAvg : 0;
-        const borderColor = intensity > 0.7 ? 'border-blue-500' : intensity > 0.4 ? 'border-blue-300' : 'border-gray-200';
-        const star = intensity > 0.7 ? '<span class="text-yellow-500">&#9733;</span>' : '';
-        return `<div class="card-light rounded-xl p-4 text-center border-2 ${borderColor}">
-          <div class="text-xs font-medium text-gray-400 uppercase">${d.slice(0,3)}</div>
-          <div class="text-lg font-bold mt-1">${slot ? formatHour(slot.hour) : '—'} ${star}</div>
-          <div class="text-xs text-gray-500 mt-1">${slot ? `${Math.round(slot.avg)} avg eng` : 'Low data'}</div>
-          <div class="text-xs text-gray-400">${slot ? `${slot.count} posts` : ''}</div>
+      document.getElementById('optimalTimes').innerHTML = days.map(d => {
+        const slot = optimalSlots.find(s => s.day === d);
+        const intensity = slot ? slot.avg / maxAvg : 0;
+        const ring = intensity > 0.7 ? 'ring-2 ring-white/40' : '';
+        const star = intensity > 0.7 ? '🔥' : '';
+        return `<div class="bg-white/15 backdrop-blur rounded-xl p-3 text-center ${ring}">
+          <div class="text-[11px] font-medium text-blue-200 uppercase">${d.slice(0,3)}</div>
+          <div class="text-lg font-bold mt-0.5">${slot ? formatHour(slot.hour) : '—'}</div>
+          <div class="text-[11px] text-blue-200">${slot ? `${Math.round(slot.avg).toLocaleString()} eng` : 'Low data'} ${star}</div>
         </div>`;
       }).join('');
     }
 
-    // --- Charts ---
-    function renderCharts() {
-      Object.values(chartInstances).forEach(c => c.destroy());
+    // --- Load YOUR page posts from Facebook Graph API ---
+    async function loadYourPagePosts() {
+      try {
+        const { token, pageId } = await getFbCredentials();
+        // Get published posts
+        const res = await fetch(`https://graph.facebook.com/v22.0/${pageId}/posts?fields=id,message,created_time,permalink_url,shares,attachments{type},likes.summary(true),comments.summary(true)&limit=50&access_token=${token}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
 
-      const hourMap = groupBy(posts.filter(p => p.hour !== null), 'hour');
-      const hours = Array.from({ length: 24 }, (_, i) => i);
-      const hourData = hours.map(h => avgEngagement(hourMap[h] || []));
+        yourPagePosts = (data.data || []).map(p => {
+          const likes = p.likes?.summary?.total_count || 0;
+          const comments = p.comments?.summary?.total_count || 0;
+          const shares = p.shares?.count || 0;
+          const text = p.message || '';
+          const date = p.created_time ? new Date(p.created_time) : null;
+          const permalink = p.permalink_url || '';
+          const attachType = p.attachments?.data?.[0]?.type || '';
 
-      chartInstances.postingTimes = new Chart(document.getElementById('chartPostingTimes'), {
-        type: 'line',
-        data: { labels: hours.map(formatHour), datasets: [{ label: 'Avg Engagement', data: hourData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 3 }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
+          let contentType = 'text';
+          if (permalink.includes('/reel/') || attachType.includes('video')) contentType = 'reel';
+          else if (attachType.includes('photo') || attachType.includes('share') || attachType === 'album') contentType = 'static';
 
-      const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-      const dayMap = groupBy(posts.filter(p => p.dayOfWeek), 'dayOfWeek');
-      const dayData = dayOrder.map(d => avgEngagement(dayMap[d] || []));
-
-      chartInstances.dayOfWeek = new Chart(document.getElementById('chartDayOfWeek'), {
-        type: 'bar',
-        data: { labels: dayOrder.map(d => d.slice(0, 3)), datasets: [{ label: 'Avg Engagement', data: dayData, backgroundColor: dayData.map((v) => v === Math.max(...dayData) ? '#3b82f6' : '#cbd5e1'), borderRadius: 8 }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
-    }
-
-    // --- Content Calendar ---
-    let calendarDate = new Date();
-    const SCHEDULE_KEY = 'vpro_scheduled_posts';
-
-    function getScheduledPosts() {
-      return JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
-    }
-
-    function getYourPagePosts() {
-      // Get your page's posts from the scraped data or cached analytics
-      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
-      const pageName = s.fbPageName || s.fbPageId || '';
-      // Check analytics cache
-      const cached = JSON.parse(localStorage.getItem('vpro_your_page_posts') || 'null');
-      if (cached && cached.posts) return cached.posts;
-      // Fallback: filter from competitor data if your page is in there
-      if (pageName && posts.length) {
-        return posts.filter(p => {
-          const pn = (p.pageName || '').toLowerCase();
-          return pn.includes(pageName.toLowerCase());
+          return {
+            id: p.id, text, postUrl: permalink, contentType,
+            likes, comments, shares,
+            totalEngagement: likes + comments + shares,
+            date: date?.toISOString() || null,
+            type: 'published',
+          };
         });
+      } catch (e) {
+        console.warn('Could not load page posts:', e.message);
+        yourPagePosts = [];
       }
-      return [];
+
+      renderRecentPosts();
     }
 
+    // --- Load scheduled posts from Facebook ---
+    async function loadScheduledPosts() {
+      try {
+        const { token, pageId } = await getFbCredentials();
+        const res = await fetch(`https://graph.facebook.com/v22.0/${pageId}/scheduled_posts?fields=id,message,scheduled_publish_time,attachments{type}&limit=50&access_token=${token}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+
+        scheduledFbPosts = (data.data || []).map(p => {
+          const text = p.message || '';
+          const date = p.scheduled_publish_time ? new Date(p.scheduled_publish_time * 1000) : null;
+          const attachType = p.attachments?.data?.[0]?.type || '';
+          let contentType = attachType.includes('photo') ? 'static' : attachType.includes('video') ? 'reel' : 'text';
+
+          return {
+            id: p.id, text, contentType,
+            date: date?.toISOString() || null,
+            type: 'scheduled',
+          };
+        });
+      } catch (e) {
+        console.warn('Could not load scheduled posts:', e.message);
+        scheduledFbPosts = [];
+      }
+    }
+
+    // --- Render recent published posts ---
+    function renderRecentPosts() {
+      const list = document.getElementById('recentPostsList');
+      const empty = document.getElementById('recentPostsEmpty');
+
+      if (yourPagePosts.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      list.innerHTML = yourPagePosts.slice(0, 15).map(p => {
+        const date = p.date ? new Date(p.date) : null;
+        const dateStr = date ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+        const icon = p.contentType === 'reel' ? '🎬' : p.contentType === 'static' ? '🖼️' : '📝';
+        const preview = p.text ? p.text.slice(0, 80) + (p.text.length > 80 ? '...' : '') : '(no text)';
+        const link = p.postUrl ? `<a href="${p.postUrl}" target="_blank" class="hover:underline">${preview}</a>` : preview;
+        return `<div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition border border-gray-100">
+          <div class="text-xl">${icon}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-700 truncate">${link}</p>
+            <p class="text-xs text-gray-400">${dateStr}</p>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-sm font-semibold text-gray-700">${p.totalEngagement.toLocaleString()}</div>
+            <div class="text-[10px] text-gray-400">${p.likes}❤️ ${p.comments}💬 ${p.shares}🔁</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // --- Calendar ---
+    let calendarDate = new Date();
+
+    function goToToday() { calendarDate = new Date(); renderCalendar(); }
     function prevMonth() { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); }
     function nextMonth() { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); }
 
@@ -295,42 +308,49 @@
 
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
-      const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+      const startOffset = (firstDay.getDay() + 6) % 7;
       const totalDays = lastDay.getDate();
       const today = new Date();
+      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-      // Get post data
-      const yourPosts = getYourPagePosts();
-      const scheduled = getScheduledPosts();
-
-      // Build day -> posts map
+      // Build day → events map
       const publishedMap = {};
-      yourPosts.forEach(p => {
+      yourPagePosts.forEach(p => {
         if (!p.date) return;
         const d = new Date(p.date);
         if (d.getMonth() === month && d.getFullYear() === year) {
           const key = d.getDate();
-          if (!publishedMap[key]) publishedMap[key] = [];
-          publishedMap[key].push(p);
+          (publishedMap[key] = publishedMap[key] || []).push(p);
         }
       });
 
       const scheduledMap = {};
-      scheduled.forEach(p => {
-        if (!p.scheduledTime) return;
-        const d = new Date(p.scheduledTime);
+      scheduledFbPosts.forEach(p => {
+        if (!p.date) return;
+        const d = new Date(p.date);
         if (d.getMonth() === month && d.getFullYear() === year) {
           const key = d.getDate();
-          if (!scheduledMap[key]) scheduledMap[key] = [];
-          scheduledMap[key].push(p);
+          (scheduledMap[key] = scheduledMap[key] || []).push(p);
+        }
+      });
+
+      // Optimal times for this month's future dates
+      const optimalMap = {};
+      optimalSlots.forEach(slot => {
+        for (let day = 1; day <= totalDays; day++) {
+          const d = new Date(year, month, day);
+          if (d <= today) continue; // only future
+          if (days[d.getDay()] === slot.day) {
+            (optimalMap[day] = optimalMap[day] || []).push(slot);
+          }
         }
       });
 
       let html = '';
 
-      // Empty cells before first day
+      // Empty cells
       for (let i = 0; i < startOffset; i++) {
-        html += '<div class="bg-gray-50 min-h-[80px] p-1"></div>';
+        html += '<div class="bg-gray-50 min-h-[90px] sm:min-h-[100px] p-1.5"></div>';
       }
 
       // Day cells
@@ -339,93 +359,82 @@
         const isPast = new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const pub = publishedMap[day] || [];
         const sched = scheduledMap[day] || [];
-        const hasPosts = pub.length + sched.length > 0;
+        const optimal = optimalMap[day] || [];
 
-        html += `<div class="bg-white min-h-[80px] p-1.5 ${isToday ? 'ring-2 ring-inset ring-blue-500' : ''} ${isPast ? 'opacity-60' : ''}">
+        html += `<div class="bg-white min-h-[90px] sm:min-h-[100px] p-1.5 ${isToday ? 'ring-2 ring-inset ring-blue-500 bg-blue-50/30' : ''} ${isPast ? 'opacity-50' : ''}">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-xs font-medium ${isToday ? 'bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-500'}">${day}</span>
-            ${hasPosts ? `<span class="text-[10px] text-gray-400">${pub.length + sched.length}</span>` : ''}
+            <span class="text-xs font-medium ${isToday ? 'bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-500'}">${day}</span>
           </div>`;
 
-        // Show up to 3 post indicators
-        const allEvents = [
-          ...pub.map(p => ({ type: 'published', text: (p.text || p.fullText || '').slice(0, 25), eng: p.totalEngagement, contentType: p.contentType })),
-          ...sched.map(p => ({ type: 'scheduled', text: (p.caption || '').slice(0, 25), contentType: p.postType || 'static' })),
-        ];
+        // Optimal time indicator (future only)
+        if (optimal.length > 0 && !isPast) {
+          optimal.forEach(o => {
+            html += `<div class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded px-1 py-0.5 mb-0.5 truncate" title="Best time to post: ${formatHour(o.hour)} (${Math.round(o.avg)} avg eng)">🔥 ${formatHour(o.hour)}</div>`;
+          });
+        }
 
-        allEvents.slice(0, 3).forEach(ev => {
-          const color = ev.type === 'published' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-          const icon = ev.contentType === 'reel' ? '🎬' : ev.contentType === 'static' ? '🖼️' : '📝';
-          html += `<div class="text-[10px] ${color} border rounded px-1 py-0.5 mb-0.5 truncate" title="${ev.text || 'Post'}">${icon} ${ev.text || ev.type}</div>`;
+        // Published posts
+        pub.slice(0, 2).forEach(p => {
+          const icon = p.contentType === 'reel' ? '🎬' : p.contentType === 'static' ? '🖼️' : '📝';
+          html += `<div class="text-[10px] bg-green-50 text-green-700 border border-green-200 rounded px-1 py-0.5 mb-0.5 truncate" title="${(p.text||'').slice(0,60)}">${icon} ${(p.text || 'Post').slice(0, 18)}</div>`;
         });
-        if (allEvents.length > 3) {
-          html += `<div class="text-[10px] text-gray-400">+${allEvents.length - 3} more</div>`;
+
+        // Scheduled posts
+        sched.slice(0, 2).forEach(p => {
+          const icon = p.contentType === 'reel' ? '🎬' : p.contentType === 'static' ? '🖼️' : '📝';
+          html += `<div class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1 py-0.5 mb-0.5 truncate" title="${(p.text||'').slice(0,60)}">${icon} ${(p.text || 'Scheduled').slice(0, 18)}</div>`;
+        });
+
+        const totalEvents = pub.length + sched.length;
+        if (totalEvents > 2) {
+          html += `<div class="text-[10px] text-gray-400">+${totalEvents - 2} more</div>`;
         }
 
         html += '</div>';
       }
 
-      // Fill remaining cells
+      // Fill remaining
       const totalCells = startOffset + totalDays;
       const remaining = (7 - (totalCells % 7)) % 7;
       for (let i = 0; i < remaining; i++) {
-        html += '<div class="bg-gray-50 min-h-[80px] p-1"></div>';
+        html += '<div class="bg-gray-50 min-h-[90px] sm:min-h-[100px] p-1.5"></div>';
       }
 
       document.getElementById('calendarGrid').innerHTML = html;
 
       // Render upcoming scheduled posts
-      renderUpcomingPosts(scheduled);
+      renderUpcoming();
     }
 
-    function renderUpcomingPosts(scheduled) {
-      const now = new Date();
-      const upcoming = scheduled
-        .filter(p => new Date(p.scheduledTime) > now)
-        .sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
-
-      const container = document.getElementById('upcomingPosts');
+    function renderUpcoming() {
+      const section = document.getElementById('upcomingSection');
       const list = document.getElementById('upcomingList');
+      const now = new Date();
+
+      const upcoming = scheduledFbPosts
+        .filter(p => p.date && new Date(p.date) > now)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
       if (upcoming.length === 0) {
-        container.classList.add('hidden');
+        section.classList.add('hidden');
         return;
       }
 
-      container.classList.remove('hidden');
+      section.classList.remove('hidden');
       list.innerHTML = upcoming.slice(0, 10).map(p => {
-        const dt = new Date(p.scheduledTime);
+        const dt = new Date(p.date);
         const dateStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        const icon = p.postType === 'reel' ? '🎬' : p.postType === 'text' ? '📝' : '🖼️';
+        const icon = p.contentType === 'reel' ? '🎬' : p.contentType === 'static' ? '🖼️' : '📝';
         return `<div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
           <div class="text-xl">${icon}</div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-700 truncate">${p.caption || 'Untitled post'}</p>
-            <p class="text-xs text-gray-500">${dateStr} at ${timeStr}</p>
+            <p class="text-sm font-medium text-gray-700 truncate">${p.text || 'Scheduled post'}</p>
+            <p class="text-xs text-blue-600">${dateStr} at ${timeStr}</p>
           </div>
-          <button onclick="removeScheduledPost('${p.id}')" class="text-xs text-red-400 hover:text-red-600 transition" title="Remove">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
         </div>`;
       }).join('');
     }
-
-    function removeScheduledPost(id) {
-      const scheduled = getScheduledPosts().filter(p => p.id !== id);
-      localStorage.setItem(SCHEDULE_KEY, JSON.stringify(scheduled));
-      renderCalendar();
-    }
   </script>
-
-  <footer class="mt-12 border-t border-gray-200 py-6 px-4 text-center text-xs text-gray-400">
-    <div class="flex flex-wrap justify-center gap-4 mb-2">
-      <a href="/privacy" class="hover:text-gray-600 transition">Privacy Policy</a>
-      <a href="/terms" class="hover:text-gray-600 transition">Terms of Service</a>
-      <a href="/cookies" class="hover:text-gray-600 transition">Cookie Policy</a>
-      <a href="mailto:support@pagegrowthpro.com" class="hover:text-gray-600 transition">Contact</a>
-    </div>
-    <p>&copy; 2026 PageGrowthPro. All rights reserved.</p>
-  </footer>
 </body>
 </html>

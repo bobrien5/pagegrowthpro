@@ -48,14 +48,32 @@ function getGeminiKey() {
 }
 
 async function getFbCredentials() {
-  // Read from localStorage (set by meta-login.js storePageConnection)
+  // 1. Try localStorage first
   const s = loadSettings();
-  if (s.fbPageToken && s.fbPageId) {
-    // Quick validate — token should start with EAA (page/user tokens) and be >20 chars
-    if (s.fbPageToken.length > 20) {
-      return { token: s.fbPageToken, pageId: s.fbPageId, pageName: s.fbPageName };
-    }
+  if (s.fbPageToken && s.fbPageId && s.fbPageToken.length > 20 && s.fbPageToken.startsWith('EAA')) {
+    return { token: s.fbPageToken, pageId: s.fbPageId, pageName: s.fbPageName };
   }
+
+  // 2. Try Supabase (has the never-expiring token)
+  try {
+    if (typeof getUser === 'function' && typeof getUserSettings === 'function') {
+      const user = await getUser();
+      if (user) {
+        const settings = await getUserSettings(user.id);
+        if (settings?.fb_page_token && settings?.fb_page_id && settings.fb_page_token.startsWith('EAA')) {
+          // Also cache in localStorage for next time
+          s.fbPageToken = settings.fb_page_token;
+          s.fbPageId = settings.fb_page_id;
+          s.fbPageName = settings.fb_page_name || s.fbPageName;
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+          return { token: settings.fb_page_token, pageId: settings.fb_page_id, pageName: settings.fb_page_name };
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Supabase FB credentials check failed:', e.message);
+  }
+
   throw new Error('Facebook page not connected. Connect your page in Settings (gear icon).');
 }
 

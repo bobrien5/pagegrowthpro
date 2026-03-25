@@ -1743,7 +1743,7 @@
           pf.append('scheduled_publish_time', scheduledTime.toString());
           pf.append('published', 'false');
           pf.append('access_token', token);
-          const pr = await (await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, { method: 'POST', body: pf })).json();
+          const pr = await (await fetch(`https://graph.facebook.com/v22.0/${pageId}/feed`, { method: 'POST', body: pf })).json();
           if (pr.error) throw new Error(pr.error.message);
         } else {
           // Static post — upload image then schedule
@@ -1752,11 +1752,11 @@
           if (!imgSrc) throw new Error('No image found. Generate posts first.');
           const blob = await dataUriToBlob(imgSrc);
           const uf = new FormData(); uf.append('source', blob, 'post.png'); uf.append('published', 'false'); uf.append('access_token', token);
-          const ur = await (await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, { method: 'POST', body: uf })).json();
+          const ur = await (await fetch(`https://graph.facebook.com/v22.0/${pageId}/photos`, { method: 'POST', body: uf })).json();
           if (ur.error) throw new Error(ur.error.message);
           showScheduleStatus('Step 2/2: Scheduling post...', 'info');
           const pf = new FormData(); pf.append('message', caption); pf.append('attached_media[0]', JSON.stringify({ media_fbid: ur.id })); pf.append('scheduled_publish_time', scheduledTime.toString()); pf.append('published', 'false'); pf.append('access_token', token);
-          const pr = await (await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, { method: 'POST', body: pf })).json();
+          const pr = await (await fetch(`https://graph.facebook.com/v22.0/${pageId}/feed`, { method: 'POST', body: pf })).json();
           if (pr.error) throw new Error(pr.error.message);
         }
         showScheduleStatus(`Scheduled for ${new Date(dateTimeStr).toLocaleString()}!`, 'success');

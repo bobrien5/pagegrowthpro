@@ -1,22 +1,64 @@
-// ===== PageGrowthPro — Scraping via Server-Side API =====
-// All Apify calls go through /api/scrape (token stays server-side)
+// ===== PageGrowthPro — Scraping via Server-Side API (async) =====
+// Start → Poll → Get Results pattern to avoid Vercel timeout
 
 const SCRAPE_API = '/api/scrape';
 
-// --- Trigger a scrape for a set of URLs ---
-async function triggerScrapeNow(userId, urls) {
-  const res = await fetch(SCRAPE_API, {
+// --- Trigger a scrape and wait for results ---
+async function triggerScrapeNow(userId, urls, onProgress) {
+  // Step 1: Start the scrape (returns immediately)
+  if (onProgress) onProgress('Starting scrape...');
+  const startRes = await fetch(SCRAPE_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ urls, userId }),
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Scrape failed: ${res.status}`);
+  if (!startRes.ok) {
+    const err = await startRes.json().catch(() => ({}));
+    throw new Error(err.error || `Scrape failed: ${startRes.status}`);
   }
 
-  const result = await res.json();
+  const { runId, datasetId, status } = await startRes.json();
+
+  // Step 2: Poll until done (if not already succeeded)
+  if (status !== 'SUCCEEDED') {
+    if (onProgress) onProgress('Scraping competitor pages...');
+    let attempts = 0;
+    while (attempts < 60) { // Max ~5 min
+      await new Promise(r => setTimeout(r, 5000));
+      attempts++;
+      if (onProgress) onProgress(`Scraping... (${attempts * 5}s)`);
+
+      const pollRes = await fetch(`${SCRAPE_API}?action=status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId }),
+      });
+
+      if (!pollRes.ok) continue;
+      const poll = await pollRes.json();
+
+      if (poll.status === 'SUCCEEDED') break;
+      if (poll.status === 'FAILED' || poll.status === 'ABORTED') {
+        throw new Error(`Scrape ${poll.status}`);
+      }
+    }
+  }
+
+  // Step 3: Get results
+  if (onProgress) onProgress('Downloading results...');
+  const resultsRes = await fetch(`${SCRAPE_API}?action=results`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ datasetId }),
+  });
+
+  if (!resultsRes.ok) {
+    const err = await resultsRes.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to get results');
+  }
+
+  const result = await resultsRes.json();
 
   // Save posts to Supabase matched to competitors
   if (userId && result.posts && result.posts.length > 0) {
@@ -54,15 +96,13 @@ async function saveScrapedPostsToSupabase(userId, urls, rawPosts) {
   }
 }
 
-// --- Scrape and refresh data for current user ---
+// --- Scrape and refresh dashboard data ---
 async function scrapeAndRefresh(userId, urls, onProgress) {
-  if (onProgress) onProgress('Starting scrape...');
+  const result = await triggerScrapeNow(userId, urls, onProgress);
 
-  const result = await triggerScrapeNow(userId, urls);
+  if (onProgress) onProgress('Loading data...');
 
-  if (onProgress) onProgress(`Scraped ${result.postCount} posts. Loading...`);
-
-  // Reload data from Supabase
+  // Reload from Supabase
   if (typeof loadUserDataFromSupabase === 'function') {
     const data = await loadUserDataFromSupabase();
     if (data && data.length > 0) {
@@ -73,8 +113,7 @@ async function scrapeAndRefresh(userId, urls, onProgress) {
   return result;
 }
 
-// --- Scrape a single page (for analytics "your page" data) ---
-async function scrapeMyPage(userId, pageUrl) {
-  const result = await triggerScrapeNow(userId, [pageUrl]);
-  return result.posts || [];
+// --- Scrape a single page (for analytics) ---
+async function scrapeMyPage(userId, pageUrl, onProgress) {
+  return triggerScrapeNow(userId, [pageUrl], onProgress);
 }

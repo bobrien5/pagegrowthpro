@@ -206,6 +206,7 @@
   </footer>
 
   <script src="js/dashboard-shared.js"></script>
+  <script src="js/apify-scheduler.js"></script>
   <script>
     document.getElementById('navBar').innerHTML = renderNav('analytics');
     document.getElementById('mobileMenu').innerHTML = renderNav('analytics').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base');
@@ -301,19 +302,11 @@
         const scrapeUrl = pageUrl || `https://www.facebook.com/${pageId}`;
         const user = typeof getUser === 'function' ? await getUser() : null;
 
-        // Use server-side scrape API (no Apify token needed client-side)
-        const res = await fetch('/api/scrape', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls: [scrapeUrl], userId: user?.id }),
+        // Use server-side scrape API (async: start → poll → results)
+        const loadingText = document.getElementById('loadingIndicator')?.querySelector('p');
+        const result = await triggerScrapeNow(user?.id, [scrapeUrl], (msg) => {
+          if (loadingText) loadingText.textContent = msg;
         });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `Scrape failed: ${res.status}`);
-        }
-
-        const result = await res.json();
         const rawPosts = result.posts || [];
 
         yourPosts = rawPosts.map(p => {

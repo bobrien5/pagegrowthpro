@@ -72,28 +72,82 @@ async function triggerScrapeNow(userId, urls, onProgress) {
   return result;
 }
 
-// --- Save scraped posts to Supabase, matched to competitors ---
+// --- Save scraped posts to Supabase ---
 async function saveScrapedPostsToSupabase(userId, urls, rawPosts) {
-  if (typeof getCompetitors !== 'function' || typeof replaceScrapedPosts !== 'function') return;
+  if (typeof saveScrapedPosts !== 'function') return;
 
-  const competitors = await getCompetitors(userId);
+  // Analyze all posts first
+  const analyzed = rawPosts.map(p => typeof analyzePost === 'function' ? analyzePost(p) : p);
 
-  for (const comp of competitors) {
-    const compUrl = comp.page_url.toLowerCase()
-      .replace('https://www.facebook.com/', '')
-      .replace('https://facebook.com/', '')
-      .replace(/\/$/, '');
+  // Try to match posts to competitors
+  let competitors = [];
+  try {
+    if (typeof getCompetitors === 'function') {
+      competitors = await getCompetitors(userId);
+    }
+  } catch (e) { console.warn('Could not load competitors:', e); }
 
-    const compPosts = rawPosts.filter(p => {
-      const postUrl = (p.pageUrl || p.url || '').toLowerCase();
-      return postUrl.includes(compUrl);
-    });
+  if (competitors.length > 0) {
+    // Match posts to competitors by pageName, pageUrl, or profile ID
+    for (const comp of competitors) {
+      // Extract the identifier from the competitor URL
+      let compId = comp.page_url.toLowerCase()
+        .replace('https://www.facebook.com/', '')
+        .replace('https://facebook.com/', '')
+        .replace(/\/$/, '');
 
-    if (compPosts.length > 0) {
-      const analyzed = compPosts.map(p => typeof analyzePost === 'function' ? analyzePost(p) : p);
-      await replaceScrapedPosts(userId, comp.id, analyzed);
+      // Handle profile.php?id=XXX format
+      const idMatch = comp.page_url.match(/[?&]id=(\d+)/);
+      if (idMatch) compId = idMatch[1];
+
+      const compPosts = analyzed.filter(p => {
+        const pageName = (p.pageName || '').toLowerCase();
+        const pageUrl = (p.pageUrl || p.postUrl || '').toLowerCase();
+        // Match by: page name contains comp name, OR URL contains comp ID, OR pageName matches
+        return pageUrl.includes(compId) ||
+               pageName.includes(compId) ||
+               (comp.page_name && pageName.includes(comp.page_name.toLowerCase()));
+      });
+
+      if (compPosts.length > 0) {
+        try {
+          await replaceScrapedPosts(userId, comp.id, compPosts);
+        } catch (e) { console.warn(`Failed to save posts for ${comp.page_name}:`, e); }
+      }
     }
   }
+
+  // Also save any unmatched posts with null competitor_id (catch-all)
+  const allSaved = new Set();
+  for (const comp of competitors) {
+    try {
+      const sb = typeof getSupabase === 'function' ? getSupabase() : null;
+      if (!sb) break;
+      const { data } = await sb.from('scraped_posts')
+        .select('post_data')
+        .eq('user_id', userId)
+        .eq('competitor_id', comp.id);
+      if (data) data.forEach(r => {
+        const url = r.post_data?.postUrl || r.post_data?.pageUrl;
+        if (url) allSaved.add(url);
+      });
+    } catch {}
+  }
+
+  const unsaved = analyzed.filter(p => {
+    const url = p.postUrl || p.pageUrl;
+    return url && !allSaved.has(url);
+  });
+
+  if (unsaved.length > 0) {
+    try {
+      // Save unmatched posts with first competitor as fallback
+      const fallbackCompId = competitors[0]?.id || null;
+      await saveScrapedPosts(userId, fallbackCompId, unsaved);
+    } catch (e) { console.warn('Failed to save unmatched posts:', e); }
+  }
+
+  console.log(`[Scrape] Saved ${analyzed.length} posts to Supabase`);
 }
 
 // --- Scrape and refresh dashboard data ---

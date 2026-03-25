@@ -5,9 +5,6 @@
     { "source": "/dashboard", "destination": "/index.html" },
     { "source": "/app", "destination": "/index.html" }
   ],
-  "redirects": [
-    { "source": "/index", "destination": "/dashboard", "permanent": false }
-  ],
   "headers": [
     {
       "source": "/(.*)",

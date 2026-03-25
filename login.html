@@ -102,14 +102,33 @@
 
       try {
         if (authMode === 'signup') {
+          const nameEl = document.getElementById('authName');
+          const name = nameEl ? nameEl.value.trim() : '';
+
           await signUp(email, password);
-          // Check if email confirmation is required
-          successEl.textContent = 'Account created! Check your email to confirm, then log in.';
-          successEl.classList.remove('hidden');
-          switchAuthTab('login');
+
+          // Admin bypass — skip payment for admin emails
+          const ADMIN_EMAILS = ['bobrien0222@gmail.com'];
+          if (ADMIN_EMAILS.includes(email.toLowerCase())) {
+            await signIn(email, password);
+            // Send welcome email silently
+            fetch('/api/send-welcome', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, name }),
+            }).catch(() => {});
+            window.location.href = '/onboarding';
+            return;
+          }
+
+          // Sign in immediately after signup
+          await signIn(email, password);
+          const user = await getUser();
+
+          // Show plan selection
+          showPlanSelection(email, name, user?.id);
         } else {
           await signIn(email, password);
-          // Check if user has competitors (onboarding complete)
           const user = await getUser();
           const competitors = await getCompetitors(user.id);
           if (competitors.length === 0) {
@@ -125,6 +144,85 @@
         spinner.classList.add('hidden');
         btnText.textContent = authMode === 'login' ? 'Log In' : 'Create Account';
       }
+    }
+
+    // --- Plan Selection + Stripe Checkout ---
+    // Stripe price IDs — these need to be created in your Stripe dashboard
+    // For now using placeholder IDs. Replace with real ones after creating products.
+    const STRIPE_PLANS = {
+      starter: { name: 'Starter', price: '$29/mo', features: '5 competitors · 30 AI posts/mo · Basic analytics', priceId: 'STARTER_PRICE_ID' },
+      pro: { name: 'Pro', price: '$79/mo', features: '15 competitors · Unlimited AI posts · Full analytics · Scheduling', priceId: 'PRO_PRICE_ID', popular: true },
+      agency: { name: 'Agency', price: '$199/mo', features: '50 competitors · Unlimited everything · White-label · Priority support', priceId: 'AGENCY_PRICE_ID' },
+    };
+
+    function showPlanSelection(email, name, userId) {
+      const container = document.querySelector('.max-w-md');
+      container.innerHTML = `
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-white">Choose your plan</h2>
+          <p class="text-gray-400 text-sm mt-1">7-day free trial · Cancel anytime</p>
+        </div>
+        <div class="space-y-3">
+          ${Object.entries(STRIPE_PLANS).map(([key, plan]) => `
+            <button onclick="startCheckout('${key}', '${email}', '${userId || ''}')"
+              class="w-full text-left p-4 rounded-xl border ${plan.popular ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 bg-white/5'} hover:border-purple-400 hover:bg-purple-500/10 transition relative">
+              ${plan.popular ? '<span class="absolute -top-2.5 right-4 bg-purple-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">MOST POPULAR</span>' : ''}
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white">${plan.name}</div>
+                  <div class="text-xs text-gray-400 mt-0.5">${plan.features}</div>
+                </div>
+                <div class="text-lg font-bold text-white">${plan.price}</div>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+        <p class="text-center text-xs text-gray-500 mt-4">
+          All plans include a 7-day money-back guarantee
+        </p>
+      `;
+
+      // Send welcome email in background
+      fetch('/api/send-welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      }).catch(() => {});
+    }
+
+    async function startCheckout(planKey, email, userId) {
+      const plan = STRIPE_PLANS[planKey];
+      if (!plan) return;
+
+      // If price IDs aren't set yet, skip to onboarding (development mode)
+      if (plan.priceId.includes('PRICE_ID')) {
+        alert('Stripe products not configured yet. Skipping to onboarding...');
+        window.location.href = '/onboarding';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ priceId: plan.priceId, email, userId }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error(data.error || 'Failed to create checkout session');
+        }
+      } catch (err) {
+        alert('Payment error: ' + err.message);
+      }
+    }
+
+    // Handle return from Stripe checkout
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('cancelled') === 'true') {
+      document.getElementById('authError').textContent = 'Payment cancelled. You can try again or choose a different plan.';
+      document.getElementById('authError').classList.remove('hidden');
     }
 
     // If already logged in, redirect

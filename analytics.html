@@ -260,7 +260,25 @@
     }
 
     // Try to auto-load your page data on start
-    setTimeout(() => {
+    setTimeout(async () => {
+      // First, sync FB connection from Supabase (in case it was set on another page/session)
+      try {
+        if (typeof getUser === 'function' && typeof getUserSettings === 'function') {
+          const user = await getUser();
+          if (user) {
+            const dbSettings = await getUserSettings(user.id);
+            if (dbSettings.fb_page_id) {
+              const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+              s.fbPageId = dbSettings.fb_page_id;
+              s.fbPageName = dbSettings.fb_page_name || s.fbPageName;
+              s.fbPageUrl = s.fbPageUrl || `https://www.facebook.com/${dbSettings.fb_page_id}`;
+              if (dbSettings.fb_page_token) s.fbPageToken = dbSettings.fb_page_token;
+              localStorage.setItem('vpro_dashboard_settings', JSON.stringify(s));
+            }
+          }
+        }
+      } catch (e) { console.warn('Failed to sync FB settings from Supabase:', e); }
+
       checkExistingFbConnection();
       const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
       if (s.fbPageUrl || s.fbPageId) {
@@ -271,7 +289,7 @@
     // --- Fetch YOUR page data via server-side scrape API ---
     async function loadPageData() {
       const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
-      const pageUrl = s.fbPageUrl;
+      const pageUrl = s.fbPageUrl || (s.fbPageId ? `https://www.facebook.com/${s.fbPageId}` : null);
       const pageId = s.fbPageId;
 
       if (!pageUrl && !pageId) {

@@ -217,7 +217,51 @@ function convertScrapedPostsToAnalyzed(scrapedRows) {
 async function loadUserDataFromSupabase() {
   const user = await getUser();
   if (!user) return [];
+
+  // Get user's connected page info (to exclude from competitor data)
+  const settings = await getUserSettings(user.id);
+  const myPageId = settings?.fb_page_id || '';
+  const myPageName = (settings?.fb_page_name || '').toLowerCase();
+  const myPageUrl = (settings?.fb_page_url || '').toLowerCase();
+
   const scrapedRows = await getScrapedPosts(user.id);
   const analyzed = convertScrapedPostsToAnalyzed(scrapedRows);
-  return analyzed.sort((a, b) => (b.totalEngagement || 0) - (a.totalEngagement || 0));
+
+  // Filter OUT the user's own page — insights should only show competitor data
+  const filtered = analyzed.filter(p => {
+    const pn = (p.pageName || '').toLowerCase();
+    const pu = (p.pageUrl || p.postUrl || '').toLowerCase();
+    // Exclude if it matches the user's own page
+    if (myPageName && pn.includes(myPageName)) return false;
+    if (myPageId && pu.includes(myPageId)) return false;
+    // Also check common patterns
+    if (myPageUrl && pu.includes(myPageUrl.replace('https://www.facebook.com/', '').replace('https://facebook.com/', '').split('/')[0])) return false;
+    return true;
+  });
+
+  return filtered.sort((a, b) => (b.totalEngagement || 0) - (a.totalEngagement || 0));
+}
+
+// Load ONLY user's own page data (for analytics page)
+async function loadMyPageDataFromSupabase() {
+  const user = await getUser();
+  if (!user) return [];
+
+  const settings = await getUserSettings(user.id);
+  const myPageId = settings?.fb_page_id || '';
+  const myPageName = (settings?.fb_page_name || '').toLowerCase();
+
+  const scrapedRows = await getScrapedPosts(user.id);
+  const analyzed = convertScrapedPostsToAnalyzed(scrapedRows);
+
+  // Filter TO only the user's own page
+  const filtered = analyzed.filter(p => {
+    const pn = (p.pageName || '').toLowerCase();
+    const pu = (p.pageUrl || p.postUrl || '').toLowerCase();
+    if (myPageName && pn.includes(myPageName)) return true;
+    if (myPageId && pu.includes(myPageId)) return true;
+    return false;
+  });
+
+  return filtered.sort((a, b) => (b.totalEngagement || 0) - (a.totalEngagement || 0));
 }

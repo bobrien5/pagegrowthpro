@@ -124,6 +124,7 @@ function analyzePost(post) {
   return {
     pageName: post.pageName || post.authorName || post.pageUrl || 'Unknown',
     pageUrl: post.pageUrl || post.url || '',
+    inputUrl: post.inputUrl || post.facebookUrl || '',
     postUrl,
     text: text.slice(0, 500),
     fullText: text,

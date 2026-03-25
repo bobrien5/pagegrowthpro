@@ -103,10 +103,15 @@ async function saveScrapedPostsToSupabase(userId, urls, rawPosts) {
       const compPosts = analyzed.filter(p => {
         const pageName = (p.pageName || '').toLowerCase();
         const pageUrl = (p.pageUrl || p.postUrl || '').toLowerCase();
-        // Match by: page name contains comp name, OR URL contains comp ID, OR pageName matches
-        return pageUrl.includes(compId) ||
+        // Also check Apify's inputUrl field which shows which URL was requested
+        const inputUrl = (p.inputUrl || '').toLowerCase();
+        const compUrlLower = comp.page_url.toLowerCase();
+        // Match by: inputUrl matches, page name contains comp name, OR URL contains comp ID
+        return inputUrl.includes(compId) ||
+               inputUrl === compUrlLower ||
+               pageUrl.includes(compId) ||
                pageName.includes(compId) ||
-               (comp.page_name && pageName.includes(comp.page_name.toLowerCase()));
+               (comp.page_name && comp.page_name.toLowerCase() !== 'profile' && pageName.includes(comp.page_name.toLowerCase()));
       });
 
       if (compPosts.length > 0) {

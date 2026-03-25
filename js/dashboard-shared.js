@@ -5,24 +5,78 @@ let posts = [];
 const chartInstances = {};
 const generatedImageData = [];
 
-// --- Settings Management ---
+// --- Settings Management (Supabase = source of truth, localStorage = fast cache) ---
 const SETTINGS_KEY = 'vpro_dashboard_settings';
+let _settingsCache = null;
 
 function loadSettings() {
-  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; }
-  catch { return {}; }
+  if (_settingsCache) return _settingsCache;
+  try { _settingsCache = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; }
+  catch { _settingsCache = {}; }
+  return _settingsCache;
 }
 
-function saveSettings() {
+// Sync settings from Supabase → localStorage (call on page load after auth)
+async function syncSettingsFromSupabase() {
+  try {
+    const user = await getUser();
+    if (!user) return;
+    const remote = await getUserSettings(user.id);
+    if (!remote) return;
+
+    const local = loadSettings();
+    // Merge Supabase values into local (Supabase wins for FB/API keys)
+    if (remote.fb_page_token) local.fbPageToken = remote.fb_page_token;
+    if (remote.fb_page_id) local.fbPageId = remote.fb_page_id;
+    if (remote.fb_page_name) local.fbPageName = remote.fb_page_name;
+    if (remote.gemini_key) local.geminiApiKey = remote.gemini_key;
+    if (remote.apify_token) local.apifyToken = remote.apify_token;
+    if (remote.brand_settings && Object.keys(remote.brand_settings).length) {
+      localStorage.setItem('vpro_brand_settings', JSON.stringify(remote.brand_settings));
+    }
+
+    _settingsCache = local;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(local));
+    console.log('[Settings] Synced from Supabase');
+  } catch (e) {
+    console.warn('[Settings] Supabase sync failed:', e.message);
+  }
+}
+
+async function saveSettings() {
   const settings = {
     geminiApiKey: document.getElementById('settingGeminiKey')?.value.trim(),
     fbPageToken: document.getElementById('settingFbToken')?.value.trim(),
     fbPageId: document.getElementById('settingFbPageId')?.value.trim(),
   };
-  // Preserve apifyToken if it was set previously
+  // Preserve existing values
   const prev = loadSettings();
   if (prev.apifyToken) settings.apifyToken = prev.apifyToken;
+  if (prev.fbPageName) settings.fbPageName = prev.fbPageName;
+  if (prev.fbPageUrl) settings.fbPageUrl = prev.fbPageUrl;
+  if (!settings.fbPageToken && prev.fbPageToken) settings.fbPageToken = prev.fbPageToken;
+  if (!settings.fbPageId && prev.fbPageId) settings.fbPageId = prev.fbPageId;
+
+  // Save to localStorage
+  _settingsCache = settings;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+
+  // Save to Supabase
+  try {
+    const user = await getUser();
+    if (user) {
+      await saveUserSettings(user.id, {
+        gemini_key: settings.geminiApiKey || null,
+        fb_page_token: settings.fbPageToken || null,
+        fb_page_id: settings.fbPageId || null,
+        fb_page_name: settings.fbPageName || null,
+        apify_token: settings.apifyToken || null,
+      });
+    }
+  } catch (e) {
+    console.warn('[Settings] Supabase save failed:', e.message);
+  }
+
   const saved = document.getElementById('settingsSaved');
   if (saved) { saved.classList.remove('hidden'); setTimeout(() => saved.classList.add('hidden'), 2000); }
 }
@@ -35,6 +89,15 @@ function initSettings() {
   if (gemini && s.geminiApiKey) gemini.value = s.geminiApiKey;
   if (fbToken && s.fbPageToken) fbToken.value = s.fbPageToken;
   if (fbPage && s.fbPageId) fbPage.value = s.fbPageId;
+
+  // Async: sync from Supabase in background
+  syncSettingsFromSupabase().then(() => {
+    // Re-populate inputs with Supabase data
+    const s2 = loadSettings();
+    if (gemini && s2.geminiApiKey && !gemini.value) gemini.value = s2.geminiApiKey;
+    if (fbToken && s2.fbPageToken && !fbToken.value) fbToken.value = s2.fbPageToken;
+    if (fbPage && s2.fbPageId && !fbPage.value) fbPage.value = s2.fbPageId;
+  });
 }
 
 function toggleSettings() {

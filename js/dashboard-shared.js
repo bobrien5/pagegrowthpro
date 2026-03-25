@@ -194,39 +194,66 @@ function initDataLoading(onDataLoaded) {
   }
 }
 
-function showNoDataState() {
+async function showNoDataState() {
   const loading = document.getElementById('loadingState');
-  if (loading) {
-    loading.innerHTML = `
-      <div class="text-center py-12">
-        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-        </div>
-        <h3 class="text-lg font-bold text-gray-700">Scraping your competitors...</h3>
-        <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">Your competitor data is being scraped. This usually takes 2-3 minutes on first load. The page will refresh automatically.</p>
-        <div class="mt-4">
-          <svg class="w-6 h-6 animate-spin mx-auto text-purple-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-        </div>
-        <p class="text-xs text-gray-400 mt-4">If this takes too long, try refreshing the page.</p>
+  if (!loading) return;
+
+  loading.innerHTML = `
+    <div class="text-center py-12">
+      <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
       </div>
-    `;
-    // Auto-retry loading every 15 seconds
-    setTimeout(() => {
-      if (typeof loadUserDataFromSupabase === 'function') {
-        loadUserDataFromSupabase().then(data => {
-          if (data && data.length > 0) {
-            posts = reclassifyPosts(data);
-            loading.classList.add('hidden');
-            document.getElementById('dashboard')?.classList.remove('hidden');
-            // Re-trigger the page's render function
-            window.location.reload();
-          } else {
-            // Still no data — keep waiting
-            setTimeout(() => window.location.reload(), 15000);
-          }
-        }).catch(() => setTimeout(() => window.location.reload(), 15000));
+      <h3 class="text-lg font-bold text-gray-700" id="scrapeStatusTitle">Scraping your competitors...</h3>
+      <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto" id="scrapeStatusMsg">Starting scrape for your competitor pages. This usually takes 2-3 minutes.</p>
+      <div class="mt-4">
+        <svg class="w-6 h-6 animate-spin mx-auto text-purple-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+      </div>
+      <p class="text-xs text-gray-400 mt-4" id="scrapeStatusDetail"></p>
+    </div>
+  `;
+
+  // Actually trigger a scrape
+  try {
+    const user = await getUser();
+    if (!user) return;
+    const competitors = await getCompetitors(user.id);
+    if (!competitors || competitors.length === 0) {
+      loading.innerHTML = '<div class="text-center py-12"><h3 class="text-lg font-bold text-gray-700">No competitors added</h3><p class="text-sm text-gray-500 mt-2">Go to <a href="/onboarding" class="text-purple-600 underline">Onboarding</a> to add competitor pages.</p></div>';
+      return;
+    }
+
+    const urls = competitors.map(c => c.page_url);
+    const updateStatus = (msg) => {
+      const el = document.getElementById('scrapeStatusMsg');
+      if (el) el.textContent = msg;
+    };
+
+    // Use the scrape function from apify-scheduler.js
+    if (typeof triggerScrapeNow === 'function') {
+      await triggerScrapeNow(user.id, urls, updateStatus);
+
+      // Scrape done — reload data from Supabase
+      updateStatus('Loading results...');
+      const data = await loadUserDataFromSupabase();
+      if (data && data.length > 0) {
+        posts = reclassifyPosts(data);
+        loading.classList.add('hidden');
+        document.getElementById('dashboard')?.classList.remove('hidden');
+        window.location.reload();
+      } else {
+        updateStatus('Scrape completed but no competitor posts found. Try refreshing.');
       }
-    }, 15000);
+    } else {
+      updateStatus('Scraping service not available. Please refresh the page.');
+    }
+  } catch (err) {
+    console.error('Auto-scrape failed:', err);
+    const el = document.getElementById('scrapeStatusTitle');
+    if (el) el.textContent = 'Scrape failed';
+    const msg = document.getElementById('scrapeStatusMsg');
+    if (msg) msg.textContent = err.message;
+    const detail = document.getElementById('scrapeStatusDetail');
+    if (detail) detail.innerHTML = '<button onclick="window.location.reload()" class="text-purple-600 underline">Try again</button>';
   }
 }
 

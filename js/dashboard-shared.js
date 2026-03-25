@@ -156,9 +156,9 @@ function reclassifyPosts(postsArr) {
   });
 }
 
-// --- Data Loading (Supabase first, file fallback) ---
+// --- Data Loading (Supabase only — no hardcoded file fallback) ---
 function initDataLoading(onDataLoaded) {
-  // Manual file upload fallback
+  // Manual file upload (dev/admin only)
   document.getElementById('fileInput')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -172,29 +172,61 @@ function initDataLoading(onDataLoaded) {
     reader.readAsText(file);
   });
 
-  // Try Supabase first (if user is logged in)
+  // Load from Supabase (user's own scraped data)
   if (typeof loadUserDataFromSupabase === 'function') {
     loadUserDataFromSupabase()
       .then(data => {
         if (data && data.length > 0) {
           posts = reclassifyPosts(data);
           onDataLoaded();
-          return;
+        } else {
+          // No data yet — show empty state or trigger first scrape
+          showNoDataState();
         }
-        // No Supabase data — fallback to local file
-        loadFromLocalFile(onDataLoaded);
       })
-      .catch(() => loadFromLocalFile(onDataLoaded));
+      .catch(err => {
+        console.warn('Failed to load data from Supabase:', err);
+        showNoDataState();
+      });
   } else {
-    loadFromLocalFile(onDataLoaded);
+    showNoDataState();
   }
 }
 
-function loadFromLocalFile(onDataLoaded) {
-  fetch('data/fb-posts-analyzed.json')
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => { posts = reclassifyPosts(data); onDataLoaded(); })
-    .catch(() => {});
+function showNoDataState() {
+  const loading = document.getElementById('loadingState');
+  if (loading) {
+    loading.innerHTML = `
+      <div class="text-center py-12">
+        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-700">Scraping your competitors...</h3>
+        <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">Your competitor data is being scraped. This usually takes 2-3 minutes on first load. The page will refresh automatically.</p>
+        <div class="mt-4">
+          <svg class="w-6 h-6 animate-spin mx-auto text-purple-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        </div>
+        <p class="text-xs text-gray-400 mt-4">If this takes too long, try refreshing the page.</p>
+      </div>
+    `;
+    // Auto-retry loading every 15 seconds
+    setTimeout(() => {
+      if (typeof loadUserDataFromSupabase === 'function') {
+        loadUserDataFromSupabase().then(data => {
+          if (data && data.length > 0) {
+            posts = reclassifyPosts(data);
+            loading.classList.add('hidden');
+            document.getElementById('dashboard')?.classList.remove('hidden');
+            // Re-trigger the page's render function
+            window.location.reload();
+          } else {
+            // Still no data — keep waiting
+            setTimeout(() => window.location.reload(), 15000);
+          }
+        }).catch(() => setTimeout(() => window.location.reload(), 15000));
+      }
+    }, 15000);
+  }
 }
 
 // --- Shared Header/Nav ---

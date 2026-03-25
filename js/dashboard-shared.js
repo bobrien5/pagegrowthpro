@@ -141,18 +141,48 @@ function analyzePost(post) {
   };
 }
 
-// Re-classify content type on pre-analyzed data using URL patterns
-// Safety net in case data was analyzed by an older version
+// Re-classify content type — only 3 types: static, reel, text
+// Uses URL patterns + text signals to determine type
 function reclassifyPosts(postsArr) {
   return postsArr.map(p => {
-    const url = p.postUrl || p.pageUrl || '';
-    if (url.includes('/reel/') || url.includes('/reels/')) {
+    const url = (p.postUrl || p.pageUrl || '').toLowerCase();
+    const text = (p.fullText || p.text || '').toLowerCase();
+
+    // Reel detection: URL pattern or reel-related hashtags
+    if (url.includes('/reel/') || url.includes('/reels/') || url.includes('/videos/')) {
       p.contentType = 'reel';
-    } else if (url.includes('/videos/')) {
-      p.contentType = 'video';
-    } else if (url.includes('/photos/')) {
+    }
+    // Also detect reels by hashtags if URL is a permalink
+    else if (/#reel|#reels|#travelreel|#fbreels/.test(text) && url.includes('permalink.php')) {
+      p.contentType = 'reel';
+    }
+    // Photos/static: URL pattern or has image data
+    else if (url.includes('/photos/') || url.includes('/photo.php') || p.imageUrl || (p.images && p.images.length > 0)) {
       p.contentType = 'static';
     }
+    // Permalink posts are almost always static (photo with caption) unless very short with no hashtags
+    else if (url.includes('permalink.php') || url.includes('/posts/')) {
+      // If it has image-related OCR or decent text length, it's static
+      // Very short posts with just emojis and no images are text
+      const isShortEmojiOnly = p.textLength < 20 && p.emojiCount > 0 && !p.hasHashtag;
+      p.contentType = isShortEmojiOnly ? 'text' : 'static';
+    }
+    // Everything else: if it has meaningful text, it's text
+    else if (p.textLength > 0) {
+      p.contentType = 'text';
+    }
+
+    // Normalize any legacy types to our 3 types
+    if (!['static', 'reel', 'text'].includes(p.contentType)) {
+      if (['photo', 'image', 'link', 'carousel', 'album'].includes(p.contentType)) {
+        p.contentType = 'static';
+      } else if (['video', 'story'].includes(p.contentType)) {
+        p.contentType = 'reel';
+      } else {
+        p.contentType = 'text';
+      }
+    }
+
     return p;
   });
 }

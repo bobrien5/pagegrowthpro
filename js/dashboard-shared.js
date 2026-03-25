@@ -142,33 +142,30 @@ function analyzePost(post) {
 }
 
 // Re-classify content type — only 3 types: static, reel, text
-// Uses URL patterns + text signals to determine type
+// On Facebook: permalink.php = photo post (static), /reel/ = reel, text-only = text
 function reclassifyPosts(postsArr) {
   return postsArr.map(p => {
     const url = (p.postUrl || p.pageUrl || '').toLowerCase();
     const text = (p.fullText || p.text || '').toLowerCase();
 
-    // Reel detection: URL pattern or reel-related hashtags
+    // 1. Reel: URL contains /reel/ or /reels/ or /videos/
     if (url.includes('/reel/') || url.includes('/reels/') || url.includes('/videos/')) {
       p.contentType = 'reel';
     }
-    // Also detect reels by hashtags if URL is a permalink
-    else if (/#reel|#reels|#travelreel|#fbreels/.test(text) && url.includes('permalink.php')) {
+    // 2. Reel: hashtag signals in permalink posts
+    else if (url.includes('permalink.php') && /#reel|#reels|#travelreel|#fbreels|#fbreel/.test(text)) {
       p.contentType = 'reel';
     }
-    // Photos/static: URL pattern or has image data
+    // 3. Static: permalink.php or /posts/ — these are photo posts on Facebook
+    else if (url.includes('permalink.php') || url.includes('/posts/')) {
+      p.contentType = 'static';
+    }
+    // 4. Static: explicit photo URLs or has image data
     else if (url.includes('/photos/') || url.includes('/photo.php') || p.imageUrl || (p.images && p.images.length > 0)) {
       p.contentType = 'static';
     }
-    // Permalink posts are almost always static (photo with caption) unless very short with no hashtags
-    else if (url.includes('permalink.php') || url.includes('/posts/')) {
-      // If it has image-related OCR or decent text length, it's static
-      // Very short posts with just emojis and no images are text
-      const isShortEmojiOnly = p.textLength < 20 && p.emojiCount > 0 && !p.hasHashtag;
-      p.contentType = isShortEmojiOnly ? 'text' : 'static';
-    }
-    // Everything else: if it has meaningful text, it's text
-    else if (p.textLength > 0) {
+    // 5. Text: no URL or just a page URL (not a specific post)
+    else if (!url || url === p.pageUrl || p.textLength > 0) {
       p.contentType = 'text';
     }
 
@@ -179,7 +176,7 @@ function reclassifyPosts(postsArr) {
       } else if (['video', 'story'].includes(p.contentType)) {
         p.contentType = 'reel';
       } else {
-        p.contentType = 'text';
+        p.contentType = 'static'; // Default to static, not text
       }
     }
 

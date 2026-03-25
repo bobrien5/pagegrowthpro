@@ -550,16 +550,69 @@
     }
 
     // --- Tracked Pages + Scraping ---
-    function renderTrackedPages() {
+    async function renderTrackedPages() {
       const el = document.getElementById('trackedPages');
       if (!el) return;
-      const pages = [...new Set(posts.map(p => p.pageName).filter(Boolean))];
-      el.innerHTML = pages.map(name => `
-        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
-          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-          ${name}
+
+      // Get competitors from Supabase
+      let competitors = [];
+      try {
+        const user = await getUser();
+        if (user) competitors = await getCompetitors(user.id);
+      } catch (e) {
+        console.warn('Could not load competitors:', e.message);
+      }
+
+      // Fallback to page names from posts if no Supabase data
+      if (competitors.length === 0) {
+        const pages = [...new Set(posts.map(p => p.pageName).filter(Boolean))];
+        el.innerHTML = pages.map(name => `
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+            ${name}
+          </span>
+        `).join('');
+        return;
+      }
+
+      el.innerHTML = competitors.map(c => `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium group">
+          <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+          ${c.page_name || c.page_url.split('/').pop()}
+          <button onclick="removeCompetitor(${c.id}, '${(c.page_name || '').replace(/'/g, "\\'")}')" class="ml-1 text-red-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100" title="Remove competitor">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </span>
       `).join('');
+    }
+
+    async function removeCompetitor(competitorId, name) {
+      if (!confirm(`Remove "${name}" from tracked competitors?`)) return;
+      try {
+        const user = await getUser();
+        if (!user) return;
+        const sb = getSupabase();
+
+        // Delete competitor
+        await sb.from('competitors').delete().eq('id', competitorId).eq('user_id', user.id);
+
+        // Delete their scraped posts
+        await sb.from('scraped_posts').delete().eq('competitor_id', competitorId).eq('user_id', user.id);
+
+        // Re-render
+        renderTrackedPages();
+
+        // Reload posts from Supabase
+        const data = await loadUserDataFromSupabase();
+        if (data && data.length > 0) {
+          posts = reclassifyPosts(data);
+          renderStats();
+          renderPlaybook();
+          renderTopPosts();
+        }
+      } catch (e) {
+        alert('Failed to remove: ' + e.message);
+      }
     }
 
     const APIFY_API_URL = 'https://api.apify.com/v2';

@@ -13,29 +13,46 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { priceId, email, userId } = req.body;
+    const { priceId, email, userId, isLifetime } = req.body;
 
     if (!priceId || !email) {
       return res.status(400).json({ error: 'Missing priceId or email' });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      customer_email: email,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${req.headers.origin || 'https://pagegrowthpro.com'}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin || 'https://pagegrowthpro.com'}/login?cancelled=true`,
-      metadata: {
-        userId: userId || '',
-        email: email,
-      },
-      subscription_data: {
-        trial_period_days: 7,
-        metadata: { userId: userId || '', email },
-      },
-    });
+    const origin = req.headers.origin || 'https://pagegrowthpro.com';
+    const metadata = { userId: userId || '', email };
 
+    let sessionConfig;
+
+    if (isLifetime) {
+      // One-time payment for lifetime plan
+      sessionConfig = {
+        mode: 'payment',
+        payment_method_types: ['card'],
+        customer_email: email,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${origin}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/login?cancelled=true`,
+        metadata: { ...metadata, plan: 'lifetime' },
+      };
+    } else {
+      // Subscription with 7-day trial
+      sessionConfig = {
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        customer_email: email,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${origin}/onboarding?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/login?cancelled=true`,
+        metadata,
+        subscription_data: {
+          trial_period_days: 7,
+          metadata,
+        },
+      };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
     return res.status(200).json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error('Stripe error:', err.message);

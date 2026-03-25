@@ -918,7 +918,7 @@
       const q = (overlayQuote || '').toLowerCase();
 
       // Strategy: create a short reaction to the overlay quote (like the competitors do)
-      // VacationPro style: "Who else agrees?? 🌅🌴" or "This is the only BS I can handle 🤣☀️"
+      // Short reaction captions matching top performer style
       let caption = '';
 
       // Match caption tone to overlay content
@@ -1478,7 +1478,7 @@
       const img = document.getElementById(`genImg${index}`); if (!img) return;
       const c = document.createElement('canvas'); c.width = img.naturalWidth || 1024; c.height = img.naturalHeight || 1024;
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      const a = document.createElement('a'); a.download = `vacationpro-${title.toLowerCase().replace(/\s+/g, '-')}.png`; a.href = c.toDataURL('image/png'); a.click();
+      const a = document.createElement('a'); a.download = `pgp-${title.toLowerCase().replace(/\s+/g, '-')}.png`; a.href = c.toDataURL('image/png'); a.click();
     }
 
     // === REEL BRIEFS (data-driven) ===

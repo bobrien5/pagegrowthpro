@@ -132,6 +132,7 @@
   </div>
 
   <script src="js/dashboard-shared.js"></script>
+  <script src="js/meta-login.js"></script>
   <script>
     document.getElementById('navBar').innerHTML = renderNav('calendar');
     document.getElementById('mobileMenu').innerHTML = renderNav('calendar').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base');
@@ -277,7 +278,7 @@
       if (pageName && posts.length) {
         return posts.filter(p => {
           const pn = (p.pageName || '').toLowerCase();
-          return pn.includes(pageName.toLowerCase()) || pn.includes('allinclusivehq') || pn.includes('vacationpro');
+          return pn.includes(pageName.toLowerCase());
         });
       }
       return [];

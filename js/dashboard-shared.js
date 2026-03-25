@@ -56,14 +56,7 @@ async function getFbCredentials() {
       return { token: s.fbPageToken, pageId: s.fbPageId, pageName: s.fbPageName };
     }
   }
-  // Try Supabase (Meta Login) as fallback
-  try {
-    if (typeof checkFacebookConnection === 'function') {
-      const fb = await checkFacebookConnection();
-      if (fb && fb.pageToken) return { token: fb.pageToken, pageId: fb.pageId, pageName: fb.pageName };
-    }
-  } catch (e) { console.warn('Supabase FB check failed:', e.message); }
-  throw new Error('Facebook page not connected. Connect your page in Settings (gear icon on the Insights page).');
+  throw new Error('Facebook page not connected. Connect your page in Settings (gear icon).');
 }
 
 function getToken() {
@@ -282,10 +275,37 @@ async function handleSignOut() {
 }
 
 // Auth gate — call at top of each dashboard page
+// Checks: logged in → has subscription → completed onboarding
+const ADMIN_EMAILS = ['bobrien0222@gmail.com'];
+
 async function authGate() {
   if (typeof requireAuth !== 'function') return; // Supabase not loaded
   const user = await requireAuth();
-  if (!user) return null; // redirected
+  if (!user) return null; // redirected to login
+
+  // Admin bypass — skip subscription check
+  if (ADMIN_EMAILS.includes(user.email?.toLowerCase())) return user;
+
+  // Check subscription status
+  try {
+    if (typeof getUserSettings === 'function') {
+      const settings = await getUserSettings(user.id);
+      const status = settings?.subscription_status;
+      const plan = settings?.subscription_plan;
+      // Allow: active, trialing, lifetime, or admin role
+      const validStatuses = ['active', 'trialing', 'trial', 'lifetime'];
+      const isAdmin = user.user_metadata?.role === 'admin';
+      if (!isAdmin && status && !validStatuses.includes(status)) {
+        // Subscription expired/cancelled — redirect to login with message
+        window.location.href = '/login?expired=true';
+        return null;
+      }
+    }
+  } catch (e) {
+    console.warn('Subscription check failed:', e.message);
+    // Don't block on check failure — allow access
+  }
+
   await checkOnboarding();
   return user;
 }

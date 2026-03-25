@@ -6,7 +6,11 @@ const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const allowedOrigins = ['https://pagegrowthpro.com', 'https://www.pagegrowthpro.com', 'http://localhost:3001'];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -21,7 +25,7 @@ module.exports = async (req, res) => {
     await sgMail.send({
       to: email,
       from: {
-        email: process.env.SENDGRID_FROM_EMAIL || 'hello@vacationpro.co',
+        email: process.env.SENDGRID_FROM_EMAIL || 'hello@vacationpro.co', // TODO: update to support@pagegrowthpro.com once verified in SendGrid
         name: 'PageGrowthPro',
       },
       subject: `Welcome to PageGrowthPro, ${firstName}!`,

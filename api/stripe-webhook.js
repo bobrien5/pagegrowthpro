@@ -26,11 +26,15 @@ module.exports = async (req, res) => {
   try {
     const buf = await buffer(req);
     const sig = req.headers['stripe-signature'];
-    if (process.env.STRIPE_WEBHOOK_SECRET && sig) {
-      event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } else {
-      event = JSON.parse(buf.toString());
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error('STRIPE_WEBHOOK_SECRET not configured');
+      return res.status(500).json({ error: 'Webhook not configured' });
     }
+    if (!sig) {
+      return res.status(400).json({ error: 'Missing stripe-signature header' });
+    }
+    event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook parse error:', err.message);
     return res.status(400).json({ error: 'Invalid webhook' });

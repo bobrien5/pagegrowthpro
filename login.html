@@ -8,12 +8,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
 </head>
-<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen flex items-center justify-center px-4 py-8 sm:p-4">
+<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen flex flex-col items-center justify-center px-4 py-6 sm:p-4 overflow-x-hidden">
 
-  <div class="w-full max-w-sm sm:max-w-md">
+  <div class="w-full max-w-sm sm:max-w-md flex-shrink-0">
     <!-- Logo -->
-    <div class="text-center mb-8">
-      <h1 class="text-3xl font-extrabold text-white tracking-tight">
+    <div class="text-center mb-6 sm:mb-8">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
         <span class="text-purple-400">Page</span>Growth<span class="text-emerald-400">Pro</span>
       </h1>
       <p class="text-sm text-gray-400 mt-2">Facebook Content Intelligence Platform</p>
@@ -239,13 +239,15 @@
     })();
   </script>
 
-  <footer class="mt-8 py-6 px-4 text-center text-xs text-gray-500">
-    <div class="flex flex-wrap justify-center gap-4 mb-2">
-      <a href="/privacy" class="hover:text-gray-300 transition">Privacy Policy</a>
-      <a href="/terms" class="hover:text-gray-300 transition">Terms of Service</a>
-      <a href="/cookies" class="hover:text-gray-300 transition">Cookie Policy</a>
+  <footer class="w-full max-w-sm sm:max-w-md mt-6 py-4 text-center text-xs text-gray-500 flex-shrink-0">
+    <div class="flex flex-wrap justify-center gap-3 mb-2">
+      <a href="/privacy" class="hover:text-gray-300 transition">Privacy</a>
+      <span class="text-gray-700">·</span>
+      <a href="/terms" class="hover:text-gray-300 transition">Terms</a>
+      <span class="text-gray-700">·</span>
+      <a href="/cookies" class="hover:text-gray-300 transition">Cookies</a>
     </div>
-    <p>&copy; 2026 PageGrowthPro. All rights reserved.</p>
+    <p>&copy; 2026 PageGrowthPro</p>
   </footer>
 </body>
 </html>

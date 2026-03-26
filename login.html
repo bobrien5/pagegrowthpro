@@ -156,7 +156,7 @@
     };
 
     function showPlanSelection(email, name, userId) {
-      const container = document.querySelector('.max-w-md');
+      const container = document.querySelector('.max-w-sm') || document.querySelector('.max-w-md');
       container.innerHTML = `
         <div class="text-center mb-6">
           <h2 class="text-2xl font-bold text-white">Choose your plan</h2>

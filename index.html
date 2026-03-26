@@ -615,23 +615,6 @@
       }
     }
 
-    const APIFY_API_URL = 'https://api.apify.com/v2';
-    const APIFY_ACTOR_ID = 'apify~facebook-posts-scraper';
-    let _apifyToken = '';
-
-    function getApifyTokenLocal() {
-      if (_apifyToken) return _apifyToken;
-      // Try Supabase settings, then localStorage, then prompt
-      const s = loadSettings();
-      if (s.apifyToken) { _apifyToken = s.apifyToken; return _apifyToken; }
-      const token = prompt('Enter your Apify API token:');
-      if (!token) throw new Error('Apify token required');
-      _apifyToken = token;
-      s.apifyToken = token;
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-      return token;
-    }
-
     function logScrape(msg) {
       const log = document.getElementById('scrapeLog');
       log.classList.remove('hidden');

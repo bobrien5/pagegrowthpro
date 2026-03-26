@@ -93,6 +93,26 @@ async function saveCompetitors(userId, urls) {
   return data;
 }
 
+async function addCompetitor(userId, url, pageName) {
+  const sb = getSupabase();
+  const existing = await getCompetitors(userId);
+  if (existing.length >= MAX_COMPETITORS) {
+    throw new Error(`Maximum ${MAX_COMPETITORS} competitors allowed`);
+  }
+  // Check for duplicate
+  if (existing.some(c => c.page_url === url.trim())) {
+    throw new Error('Competitor already tracked');
+  }
+  const { data, error } = await sb.from('competitors').insert({
+    user_id: userId,
+    page_url: url.trim(),
+    page_name: pageName || extractPageName(url),
+    active: true,
+  }).select();
+  if (error) throw error;
+  return data?.[0];
+}
+
 async function getCompetitors(userId) {
   const sb = getSupabase();
   const { data, error } = await sb.from('competitors')

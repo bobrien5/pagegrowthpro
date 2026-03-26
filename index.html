@@ -1489,6 +1489,7 @@
       const overlayPool = [...extractOverlayLines(), ...FALLBACK_OVERLAY_LINES];
       _usedOverlays.clear(); _usedCaptions.clear();
       overlayLines.length = 0; generatedCaptions.length = 0;
+      approvedPosts.clear(); // Reset approvals on regenerate
 
       for (let i = 0; i < count; i++) {
         overlayLines[i] = pickUnique(overlayPool, _usedOverlays);
@@ -1750,7 +1751,9 @@
       const tmr = new Date(); tmr.setDate(tmr.getDate() + 1); tmr.setHours(9, 0, 0, 0);
       document.getElementById('scheduleDateTime').value = tmr.toISOString().slice(0, 16);
       document.getElementById('scheduleStatus').classList.add('hidden');
-      document.getElementById('scheduleSubmitBtn').disabled = false;
+      const submitBtn = document.getElementById('scheduleSubmitBtn');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> Schedule Post';
       document.getElementById('scheduleModal').classList.remove('hidden');
     }
     function closeScheduleModal() { document.getElementById('scheduleModal').classList.add('hidden'); scheduleImageIndex = null; }

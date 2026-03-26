@@ -8,9 +8,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
 </head>
-<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen flex items-center justify-center px-4 py-8 sm:p-4">
 
-  <div class="w-full max-w-md">
+  <div class="w-full max-w-sm sm:max-w-md">
     <!-- Logo -->
     <div class="text-center mb-8">
       <h1 class="text-3xl font-extrabold text-white tracking-tight">
@@ -20,7 +20,7 @@
     </div>
 
     <!-- Card -->
-    <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 p-8 shadow-2xl">
+    <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 p-5 sm:p-8 shadow-2xl">
       <!-- Tab Toggle -->
       <div class="flex bg-white/5 rounded-xl p-1 mb-6">
         <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-white text-gray-900 transition">Log In</button>
@@ -150,9 +150,8 @@
     // Stripe price IDs — these need to be created in your Stripe dashboard
     // For now using placeholder IDs. Replace with real ones after creating products.
     const STRIPE_PLANS = {
-      starter: { name: 'Starter', price: '$8.99/mo', features: 'Connect 1 page · AI post generation · Basic analytics', priceId: 'price_1TEqJ4IWKaDHwSKLnfOaOfy8' },
-      pro: { name: 'Pro', price: '$15.99/mo', features: 'Up to 3 pages · Unlimited AI posts · Full analytics · Scheduling', priceId: 'price_1TEqJgIWKaDHwSKLIuNHo2TR', popular: true },
-      agency: { name: 'Agency', price: '$22.99/mo', features: '3+ pages · Unlimited everything · Priority support', priceId: 'price_1TEqKaIWKaDHwSKLVTKwHCE2' },
+      monthly: { name: 'Monthly', price: '$15.99/mo', features: 'Full access · AI posts · Analytics · Scheduling · Cancel anytime', priceId: 'price_1TEqJgIWKaDHwSKLIuNHo2TR' },
+      annual: { name: 'Annual', price: '$9.99/mo', features: 'Everything in Monthly · Billed $119.88/year · Save 37%', priceId: 'price_annual_placeholder', popular: true },
       lifetime: { name: 'Lifetime', price: '$99', features: 'One-time payment · Everything forever · Best value', priceId: 'price_1TEqL9IWKaDHwSKLCIpxHSmV', lifetime: true },
     };
 

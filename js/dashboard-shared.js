@@ -472,7 +472,7 @@ async function handleSignOut() {
 
 // Auth gate — call at top of each dashboard page
 // Checks: logged in → has subscription → completed onboarding
-const ADMIN_EMAILS = ['bobrien0222@gmail.com'];
+const ADMIN_EMAILS = ['bobrien0222@gmail.com', 'metareview@pagegrowthpro.com'];
 
 async function authGate() {
   if (typeof requireAuth !== 'function') return; // Supabase not loaded

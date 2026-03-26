@@ -108,7 +108,7 @@
           await signUp(email, password);
 
           // Admin bypass — skip payment for admin emails
-          const ADMIN_EMAILS = ['bobrien0222@gmail.com'];
+          const ADMIN_EMAILS = ['bobrien0222@gmail.com', 'metareview@pagegrowthpro.com'];
           if (ADMIN_EMAILS.includes(email.toLowerCase())) {
             await signIn(email, password);
             // Send welcome email silently

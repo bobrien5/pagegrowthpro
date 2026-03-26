@@ -209,8 +209,7 @@
   <script src="js/apify-scheduler.js"></script>
   <script>
     document.getElementById('navBar').innerHTML = renderNav('analytics');
-    document.getElementById('mobileMenu').innerHTML = renderNav('analytics').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base');
-    document.addEventListener('DOMContentLoaded', initSettings);
+    document.addEventListener('DOMContentLoaded', () => { initSettings(); checkExistingFbConnection(); renderBottomNav('analytics'); });
 
     let yourPosts = []; // Posts from your actual page via Graph API
     const FB_API = 'https://graph.facebook.com/v22.0';

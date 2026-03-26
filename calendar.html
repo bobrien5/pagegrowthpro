@@ -125,8 +125,7 @@
   <script src="js/meta-login.js"></script>
   <script>
     document.getElementById('navBar').innerHTML = renderNav('scheduler');
-    document.getElementById('mobileMenu').innerHTML = renderNav('scheduler').replace(/gap-1\.5/g, 'gap-2').replace(/px-3 py-1\.5/g, 'px-4 py-2.5').replace(/text-sm/g, 'text-base') + '<button onclick="signOut()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-400 hover:text-white hover:bg-white/10 transition w-full">Sign Out</button>';
-    document.addEventListener('DOMContentLoaded', initSettings);
+    document.addEventListener('DOMContentLoaded', () => { initSettings(); renderBottomNav('scheduler'); });
 
     let yourPagePosts = [];
     let scheduledFbPosts = [];

@@ -385,25 +385,18 @@ function renderNav(activePage) {
   `).join('');
 }
 
-// Bottom nav for mobile (fixed at bottom of screen)
+// Mobile nav — populates the hamburger dropdown with page links + sign out
 function renderBottomNav(activePage) {
-  const nav = document.createElement('nav');
-  nav.className = 'fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 md:hidden z-50';
-  nav.innerHTML = `
-    <div class="flex items-center justify-around h-14">
-      ${NAV_PAGES.map(p => `
-        <a href="${p.href}" class="flex flex-col items-center gap-0.5 px-3 py-1.5 ${
-          p.id === activePage ? 'text-purple-400' : 'text-gray-500'
-        }">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${p.icon}</svg>
-          <span class="text-[10px] font-medium">${p.label}</span>
-        </a>
-      `).join('')}
-    </div>
-  `;
-  document.body.appendChild(nav);
-  // Add padding to body so content isn't hidden behind bottom nav
-  document.body.style.paddingBottom = '56px';
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (!mobileMenu) return;
+  mobileMenu.innerHTML = NAV_PAGES.map(p => `
+    <a href="${p.href}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium transition ${
+      p.id === activePage ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'
+    }">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${p.icon}</svg>
+      ${p.label}
+    </a>
+  `).join('') + '<button onclick="signOut()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-400 hover:text-white hover:bg-white/10 transition w-full">Sign Out</button>';
 }
 
 function renderBrandHeader() {

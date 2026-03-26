@@ -259,96 +259,98 @@
       }
     }
 
-    // Try to auto-load your page data on start
-    setTimeout(async () => {
-      // First, sync FB connection from Supabase (in case it was set on another page/session)
+    // Auth gate + auto-load
+    (async () => {
+      const user = await authGate();
+      if (!user) return;
+
+      // Sync FB connection from Supabase
       try {
-        if (typeof getUser === 'function' && typeof getUserSettings === 'function') {
-          const user = await getUser();
-          if (user) {
-            const dbSettings = await getUserSettings(user.id);
-            if (dbSettings.fb_page_id) {
-              const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
-              s.fbPageId = dbSettings.fb_page_id;
-              s.fbPageName = dbSettings.fb_page_name || s.fbPageName;
-              s.fbPageUrl = s.fbPageUrl || `https://www.facebook.com/${dbSettings.fb_page_id}`;
-              if (dbSettings.fb_page_token) s.fbPageToken = dbSettings.fb_page_token;
-              localStorage.setItem('vpro_dashboard_settings', JSON.stringify(s));
-            }
-          }
+        const dbSettings = await getUserSettings(user.id);
+        if (dbSettings.fb_page_id && dbSettings.fb_page_token) {
+          const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
+          s.fbPageId = dbSettings.fb_page_id;
+          s.fbPageName = dbSettings.fb_page_name || s.fbPageName;
+          s.fbPageToken = dbSettings.fb_page_token;
+          s.fbPageUrl = s.fbPageUrl || `https://www.facebook.com/${dbSettings.fb_page_id}`;
+          localStorage.setItem('vpro_dashboard_settings', JSON.stringify(s));
         }
-      } catch (e) { console.warn('Failed to sync FB settings from Supabase:', e); }
+      } catch (e) { console.warn('Supabase sync failed:', e); }
 
       checkExistingFbConnection();
-      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
-      if (s.fbPageUrl || s.fbPageId) {
+
+      // Load competitor data in background (for comparison charts)
+      initDataLoading(() => {});
+
+      // Load YOUR page data via Graph API
+      try {
+        await getFbCredentials(); // Will throw if no token
         loadPageData();
+      } catch (e) {
+        // No FB token — show connect state
+        document.getElementById('loadingState')?.classList.add('hidden');
       }
-    }, 500);
+    })();
 
-    // --- Fetch YOUR page data via server-side scrape API ---
+    // --- Fetch YOUR page data via Facebook Graph API ---
     async function loadPageData() {
-      const s = JSON.parse(localStorage.getItem('vpro_dashboard_settings') || '{}');
-      const pageUrl = s.fbPageUrl || (s.fbPageId ? `https://www.facebook.com/${s.fbPageId}` : null);
-      const pageId = s.fbPageId;
-
-      if (!pageUrl && !pageId) {
-        alert('Connect your Facebook page first (gear icon → paste your page URL)');
-        return;
-      }
-
       document.getElementById('connectState').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
       document.getElementById('loadingIndicator').classList.remove('hidden');
       document.getElementById('loadingIndicator').innerHTML = `
         <svg class="w-8 h-8 animate-spin mx-auto text-green-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-        <p class="text-sm text-gray-500 mt-3">Analyzing your page...</p>
-        <p class="text-xs text-gray-400 mt-1">This may take 1-2 minutes on first load</p>
+        <p class="text-sm text-gray-500 mt-3">Loading your page data from Facebook...</p>
       `;
-      document.getElementById('yourPageName').textContent = s.fbPageName || pageId;
-
-      // Check if we have cached data (less than 6 hours old)
-      const cacheKey = 'vpro_your_page_posts';
-      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-      if (cached && cached.pageId === pageId && (Date.now() - cached.timestamp) < 6 * 60 * 60 * 1000) {
-        yourPosts = cached.posts;
-        renderYourPageData();
-        return;
-      }
 
       try {
-        const scrapeUrl = pageUrl || `https://www.facebook.com/${pageId}`;
-        const user = typeof getUser === 'function' ? await getUser() : null;
+        // Get FB credentials (reads from Supabase, not localStorage)
+        const creds = await getFbCredentials();
+        const token = creds.token;
+        const pageId = creds.pageId;
 
-        // Use server-side scrape API (async: start → poll → results)
-        const loadingText = document.getElementById('loadingIndicator')?.querySelector('p');
-        const result = await triggerScrapeNow(user?.id, [scrapeUrl], (msg) => {
-          if (loadingText) loadingText.textContent = msg;
-        });
-        const rawPosts = result.posts || [];
+        document.getElementById('yourPageName').textContent = creds.pageName || pageId;
 
-        yourPosts = rawPosts.map(p => {
-          if (typeof analyzePost === 'function') return analyzePost(p);
-          const likes = p.likes || p.likesCount || 0;
-          const comments = p.comments || p.commentsCount || 0;
-          const shares = p.shares || p.sharesCount || 0;
-          const text = p.text || p.postText || p.message || '';
-          const date = p.time || p.date || p.timestamp || p.postDate;
-          const parsedDate = date ? new Date(date) : null;
-          const postUrl = p.postUrl || p.url || '';
+        // Fetch page info
+        const pageRes = await fetch(`https://graph.facebook.com/v22.0/${pageId}?fields=name&access_token=${token}`);
+        const pageInfo = await pageRes.json();
+        if (pageInfo.error) throw new Error(pageInfo.error.message);
+        document.getElementById('yourPageName').textContent = pageInfo.name || creds.pageName || pageId;
+
+        // Fetch recent posts with engagement
+        const postsRes = await fetch(`https://graph.facebook.com/v22.0/${pageId}/posts?fields=id,message,created_time,permalink_url,shares,attachments{type,subattachments},likes.summary(true),comments.summary(true)&limit=100&access_token=${token}`);
+        const postsData = await postsRes.json();
+        if (postsData.error) throw new Error(postsData.error.message);
+
+        yourPosts = (postsData.data || []).map(p => {
+          const likes = p.likes?.summary?.total_count || 0;
+          const comments = p.comments?.summary?.total_count || 0;
+          const shares = p.shares?.count || 0;
+          const text = p.message || '';
+          const date = p.created_time ? new Date(p.created_time) : null;
+          const permalink = p.permalink_url || '';
+          const attachType = p.attachments?.data?.[0]?.type || '';
+
+          // Classify content type
           let contentType = 'text';
-          if (p.type) contentType = p.type.toLowerCase();
-          else if (postUrl.includes('/reel/') || p.videoUrl || p.video) contentType = 'reel';
-          else if (p.imageUrl || p.image || (p.images && p.images.length)) contentType = 'static';
-          else if (p.link || p.linkUrl) contentType = 'link';
-          return { text: text.slice(0, 500), fullText: text, postUrl, contentType, likes, comments, shares, totalEngagement: likes + comments + shares, date: parsedDate?.toISOString() || null, dayOfWeek: parsedDate ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][parsedDate.getDay()] : null, hour: parsedDate?.getHours() ?? null, pageName: s.fbPageName || pageId };
-        }).sort((a, b) => b.totalEngagement - a.totalEngagement);
+          if (permalink.includes('/reel/')) contentType = 'reel';
+          else if (attachType.includes('video') || attachType === 'video_inline') contentType = 'reel';
+          else if (attachType.includes('photo') || attachType.includes('share') || attachType === 'album') contentType = 'static';
+          else if (text.length > 0 && !attachType) contentType = 'text';
 
-        // Cache results
-        localStorage.setItem(cacheKey, JSON.stringify({ pageId, posts: yourPosts, timestamp: Date.now() }));
+          return {
+            id: p.id, text, fullText: text, postUrl: permalink, contentType,
+            likes, comments, shares,
+            totalEngagement: likes + comments + shares,
+            date: date?.toISOString() || null,
+            dayOfWeek: date ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][date.getDay()] : null,
+            hour: date?.getHours() ?? null,
+            pageName: pageInfo.name || creds.pageName || pageId,
+          };
+        }).sort((a, b) => b.totalEngagement - a.totalEngagement);
 
         renderYourPageData();
       } catch (e) {
+        console.error('Analytics load failed:', e);
         document.getElementById('loadingIndicator').innerHTML = `
           <div class="text-red-500 font-medium">Failed to load page data</div>
           <p class="text-sm text-gray-500 mt-1">${e.message}</p>

@@ -314,7 +314,7 @@ async function showNoDataState() {
         <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
       </div>
       <h3 class="text-lg font-bold text-gray-700" id="scrapeStatusTitle">Scraping your competitors...</h3>
-      <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto" id="scrapeStatusMsg">Starting scrape for your competitor pages. This usually takes 2-3 minutes.</p>
+      <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto" id="scrapeStatusMsg">This usually takes about 5 minutes on first load. You can leave this page open or close it — we'll email you when it's ready.</p>
       <div class="mt-4">
         <svg class="w-6 h-6 animate-spin mx-auto text-purple-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
       </div>
@@ -342,7 +342,19 @@ async function showNoDataState() {
     if (typeof triggerScrapeNow === 'function') {
       await triggerScrapeNow(user.id, urls, updateStatus);
 
-      // Scrape done — reload data from Supabase
+      // Scrape done — send email notification
+      try {
+        const user = await getUser();
+        if (user?.email) {
+          fetch('/api/send-welcome', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, name: '', template: 'scrape_ready' }),
+          }).catch(() => {});
+        }
+      } catch {}
+
+      // Reload data from Supabase
       updateStatus('Loading results...');
       const data = await loadUserDataFromSupabase();
       if (data && data.length > 0) {

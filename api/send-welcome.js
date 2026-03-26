@@ -17,17 +17,39 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { email, name } = req.body;
+    const { email, name, template } = req.body;
     if (!email) return res.status(400).json({ error: 'Missing email' });
 
     const firstName = (name || email.split('@')[0]).split(' ')[0];
+    const fromEmail = { email: process.env.SENDGRID_FROM_EMAIL || 'hello@vacationpro.co', name: 'PageGrowthPro' };
 
+    // Scrape ready notification
+    if (template === 'scrape_ready') {
+      await sgMail.send({
+        to: email,
+        from: fromEmail,
+        subject: 'Your competitor data is ready!',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="font-size: 28px; font-weight: 800; color: #1a1a2e;"><span style="color: #7C3AED;">Page</span>Growth<span style="color: #10B981;">Pro</span></h1>
+            </div>
+            <h2 style="font-size: 24px; font-weight: 700; color: #1a1a2e; margin-bottom: 16px;">Your insights are ready! 📊</h2>
+            <p style="font-size: 16px; color: #4a4a68; line-height: 1.6; margin-bottom: 24px;">We've finished scraping your competitor pages. Your dashboard is now loaded with insights, top-performing posts, and AI-generated content ideas.</p>
+            <div style="text-align: center; margin-bottom: 32px;">
+              <a href="https://pagegrowthpro.com/dashboard" style="display: inline-block; background: #7C3AED; color: white; font-weight: 600; font-size: 16px; padding: 14px 32px; border-radius: 8px; text-decoration: none;">View Your Dashboard →</a>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e8e8f0; margin: 32px 0;">
+            <p style="font-size: 12px; color: #b0b0c0; text-align: center;">PageGrowthPro · <a href="https://pagegrowthpro.com/privacy" style="color: #b0b0c0;">Privacy</a> · <a href="https://pagegrowthpro.com/terms" style="color: #b0b0c0;">Terms</a></p>
+          </div>`,
+      });
+      return res.status(200).json({ success: true });
+    }
+
+    // Default: Welcome email
     await sgMail.send({
       to: email,
-      from: {
-        email: process.env.SENDGRID_FROM_EMAIL || 'hello@vacationpro.co', // TODO: update to support@pagegrowthpro.com once verified in SendGrid
-        name: 'PageGrowthPro',
-      },
+      from: fromEmail,
       subject: `Welcome to PageGrowthPro, ${firstName}!`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">

@@ -651,9 +651,6 @@
       const urls = textarea.value.trim().split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
       if (!urls.length) { alert('Paste at least one Facebook page URL'); return; }
 
-      let token;
-      try { token = getApifyTokenLocal(); } catch { return; }
-
       const btn = document.getElementById('scrapeBtn');
       btn.disabled = true;
       btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Scraping...';
@@ -662,41 +659,57 @@
       logScrape(`Starting scrape for ${urls.length} page(s)...`);
 
       try {
-        logScrape('Sending to Apify...');
-        const startRes = await fetch(`${APIFY_API_URL}/acts/${APIFY_ACTOR_ID}/runs?token=${token}&waitForFinish=300`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startUrls: urls.map(url => ({ url })), resultsLimit: 50 }),
-        });
-        if (!startRes.ok) throw new Error(`Apify error: ${startRes.status}`);
-        const runData = (await startRes.json()).data;
-        logScrape(`Run started: ${runData.id}`);
+        const user = await getUser();
+        const userId = user?.id || 'anonymous';
 
-        let datasetId = runData.defaultDatasetId;
-        if (runData.status !== 'SUCCEEDED') {
-          logScrape('Waiting for completion...');
-          while (true) {
-            const pollRes = await fetch(`${APIFY_API_URL}/actor-runs/${runData.id}?token=${token}`);
-            const pollData = (await pollRes.json()).data;
-            if (pollData.status === 'SUCCEEDED') { datasetId = pollData.defaultDatasetId; logScrape('Run completed!'); break; }
-            if (pollData.status === 'FAILED' || pollData.status === 'ABORTED') throw new Error(`Run ${pollData.status}`);
-            await new Promise(r => setTimeout(r, 5000));
-            logScrape('Still running...');
+        // Save new competitors to Supabase
+        if (user) {
+          for (const url of urls) {
+            let pageName = url;
+            try {
+              const u = new URL(url);
+              const path = u.pathname.replace(/^\//, '').replace(/\/$/, '');
+              pageName = u.searchParams.get('id') || path.split('/')[0] || url;
+            } catch {}
+            try {
+              await addCompetitor(user.id, url, pageName);
+              logScrape(`Added competitor: ${pageName}`);
+            } catch (e) {
+              logScrape(`Note: ${e.message}`);
+            }
           }
         }
 
-        logScrape('Downloading results...');
-        const dataRes = await fetch(`${APIFY_API_URL}/datasets/${datasetId}/items?token=${token}&format=json&clean=true`);
-        const rawPosts = await dataRes.json();
+        // Use server-side scrape API
+        logScrape('Starting scrape via server...');
+        const result = await triggerScrapeNow(userId, urls, (msg) => logScrape(msg));
+
+        const rawPosts = result.posts || [];
         logScrape(`Got ${rawPosts.length} new posts`);
 
+        // Analyze and merge
         const newAnalyzed = rawPosts.map(analyzePost);
         const beforeCount = posts.length;
         posts = [...posts, ...newAnalyzed].sort((a, b) => b.totalEngagement - a.totalEngagement);
         logScrape(`Merged: ${beforeCount} + ${newAnalyzed.length} = ${posts.length} total posts`);
 
-        // Re-render entire dashboard
-        if (document.getElementById('postCount')) document.getElementById('postCount').textContent = `${posts.length} posts from ${new Set(posts.map(p => p.pageName)).size} pages`;
+        // Save to Supabase
+        if (user && newAnalyzed.length > 0) {
+          logScrape('Saving to database...');
+          try {
+            const sb = getSupabase();
+            const rows = newAnalyzed.map(p => ({ user_id: user.id, post_data: p }));
+            // Insert in batches of 50
+            for (let i = 0; i < rows.length; i += 50) {
+              await sb.from('scraped_posts').insert(rows.slice(i, i + 50));
+            }
+            logScrape(`Saved ${newAnalyzed.length} posts to database`);
+          } catch (e) {
+            logScrape(`DB save warning: ${e.message}`);
+          }
+        }
+
+        // Re-render dashboard
         renderStats();
         renderPlaybook();
         renderTopPosts();
@@ -709,7 +722,7 @@
 
       } catch (err) {
         logScrape(`ERROR: ${err.message}`);
-        setScrapeStatus('Error', 'bg-red-100 text-red-700');
+        setScrapeStatus('Error — ' + err.message, 'bg-red-100 text-red-700');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Scrape & Add to Dashboard';
